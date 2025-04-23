@@ -1,0 +1,172 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:4000
+      - NAVIGATION_SERVICE_URL=http://navigation-service:4001
+#      - INCIDENTS_SERVICE_URL=http://incidents-service:4002
+#      - NOTIFICATION_SERVICE_URL=http://notification-service:4003
+#      - ANALYTICS_SERVICE_URL=http://analytics-service:4004
+    depends_on:
+      - auth-service
+      - navigation-service
+#      - incidents-service
+#      - notification-service
+#      - analytics-service
+    networks:
+      - trafine-network
+
+  # Service d'authentification
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - MONGO_URI=mongodb://mongodb:27017/trafine-auth
+      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_EXPIRES_IN=1d
+    depends_on:
+      - mongodb
+    networks:
+      - trafine-network
+
+  # Service de navigation
+  navigation-service:
+    build: ./navigation-service
+    ports:
+      - "4001:4001"
+    environment:
+      - NODE_ENV=development
+      - PORT=4001
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=trafine-navigation
+      - TOMTOM_API_KEY=your_tomtom_api_key_here
+    depends_on:
+      - postgres
+    networks:
+      - trafine-network
+
+#  # Service de gestion des incidents
+#  incidents-service:
+#    build: ./incidents-services
+#    ports:
+#      - "4002:4002"
+#    environment:
+#      - NODE_ENV=development
+#      - PORT=4002
+#      - POSTGRES_HOST=postgres
+#      - POSTGRES_PORT=5432
+#      - POSTGRES_USER=postgres
+#      - POSTGRES_PASSWORD=postgres
+#      - POSTGRES_DB=trafine-incidents
+#      - REDIS_HOST=redis
+#      - REDIS_PORT=6379
+#    depends_on:
+#      - postgres
+#      - redis
+#    networks:
+#      - trafine-network
+#
+#  # Service de notifications
+#  notification-service:
+#    build: ./notification-services
+#    ports:
+#      - "4003:4003"
+#    environment:
+#      - NODE_ENV=development
+#      - PORT=4003
+#      - REDIS_HOST=redis
+#      - REDIS_PORT=6379
+#    depends_on:
+#      - redis
+#    networks:
+#      - trafine-network
+#
+#  # Service d'analyse
+#  analytics-service:
+#    build: ./analytics-services
+#    ports:
+#      - "4004:4004"
+#    environment:
+#      - NODE_ENV=development
+#      - PORT=4004
+#      - POSTGRES_HOST=postgres
+#      - POSTGRES_PORT=5432
+#      - POSTGRES_USER=postgres
+#      - POSTGRES_PASSWORD=postgres
+#      - POSTGRES_DB=trafine-analytics
+#    depends_on:
+#      - postgres
+#    networks:
+#      - trafine-network
+
+  # Web Client (Next.js)
+  web-client:
+    build: ./web-client
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - API_URL=http://api-gateway:3000
+
+    depends_on:
+      - api-gateway
+    networks:
+      - trafine-network
+
+  # MongoDB pour le services d'authentification
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - trafine-network
+
+  # PostgreSQL avec PostGIS pour les services de navigation et incidents
+  postgres:
+    image: postgis/postgis:14-3.2
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_MULTIPLE_DATABASES=trafine-navigation,trafine-incidents,trafine-analytics
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/init-multiple-postgresql-databases.sh
+    networks:
+      - trafine-network
+
+  # Redis pour la gestion en temps réel
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - trafine-network
+
+networks:
+  trafine-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  postgres_data:
+  redis_data:

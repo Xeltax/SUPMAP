@@ -1,0 +1,213 @@
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/router';
+import Cookies from 'js-cookie';
+import api from '@/services/api';
+
+// Types
+interface User {
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+    profilePicture: string;
+}
+
+interface AuthContextType {
+    user: User | null;
+    token: string | null;
+    isLoading: boolean;
+    isAuthenticated: boolean;
+    login: (email: string, password: string) => Promise<void>;
+    register: (username: string, email: string, password: string) => Promise<void>;
+    logout: () => Promise<void>;
+    updateProfile: (data: { username?: string; email?: string }) => Promise<void>;
+    updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+}
+
+// Création du contexte d'authentification
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Hook personnalisé pour utiliser le contexte d'authentification
+export const useAuth = (): AuthContextType => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth doit être utilisé à l\'intérieur d\'un AuthProvider');
+    }
+    return context;
+};
+
+// Props du fournisseur d'authentification
+interface AuthProviderProps {
+    children: ReactNode;
+}
+
+// Durée de vie du cookie en jours
+const COOKIE_EXPIRY = 7;
+
+// Fournisseur d'authentification
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [token, setToken] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+
+    // Vérifier l'authentification à l'initialisation
+    useEffect(() => {
+        const checkAuth = async () => {
+            setIsLoading(true);
+            // Récupérer le token depuis les cookies
+            const storedToken = Cookies.get('token');
+            const storedUser = Cookies.get('user');
+
+            if (storedToken && storedUser) {
+                setToken(storedToken);
+                try {
+                    setUser(JSON.parse(storedUser));
+
+                    // Vérifier que le token est toujours valide
+                    const response = await api.auth.getProfile();
+                    setUser(response.data?.user);
+                } catch (error) {
+                    // Si le token est invalide, déconnecter l'utilisateur
+                    Cookies.remove('token');
+                    Cookies.remove('user');
+                    setToken(null);
+                    setUser(null);
+                }
+            }
+
+            setIsLoading(false);
+        };
+
+        checkAuth();
+    }, []);
+
+    // Connexion
+    const login = async (email: string, password: string) => {
+        setIsLoading(true);
+        try {
+            const response = await api.auth.login(email, password);
+
+            if (response.data) {
+                const { token, user } = response.data;
+
+                // Stocker les informations dans les cookies
+                Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+                Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+
+                setToken(token);
+                setUser(user);
+                router.push('/dashboard');
+            }
+        } catch (error) {
+            console.error('Erreur de connexion:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Inscription
+    const register = async (username: string, email: string, password: string) => {
+        setIsLoading(true);
+        try {
+            const response = await api.auth.register(username, email, password);
+
+            if (response.data) {
+                const { token, user } = response.data;
+
+                // Stocker les informations dans les cookies
+                Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+                Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+
+                setToken(token);
+                setUser(user);
+                router.push('/dashboard');
+            }
+        } catch (error) {
+            console.error('Erreur d\'inscription:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Déconnexion
+    const logout = async () => {
+        setIsLoading(true);
+        try {
+            await api.auth.logout();
+        } catch (error) {
+            console.error('Erreur lors de la déconnexion:', error);
+        } finally {
+            // Supprimer les cookies
+            Cookies.remove('token');
+            Cookies.remove('user');
+
+            setToken(null);
+            setUser(null);
+            setIsLoading(false);
+            router.push('/login');
+        }
+    };
+
+    // Mise à jour du profil
+    const updateProfile = async (data: { username?: string; email?: string }) => {
+        setIsLoading(true);
+        try {
+            const response = await api.auth.updateProfile(data);
+
+            if (response.data?.user) {
+                setUser(response.data.user);
+                // Mettre à jour le cookie user
+                Cookies.set('user', JSON.stringify(response.data.user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+            }
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour du profil:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Mise à jour du mot de passe
+    const updatePassword = async (currentPassword: string, newPassword: string) => {
+        setIsLoading(true);
+        try {
+            const response = await api.auth.updatePassword(currentPassword, newPassword);
+
+            if (response.data) {
+                const { token, user } = response.data;
+
+                // Mettre à jour les cookies
+                Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+                Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+
+                setToken(token);
+                setUser(user);
+            }
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour du mot de passe:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Valeur du contexte
+    const value = {
+        user,
+        token,
+        isLoading,
+        isAuthenticated: !!user,
+        login,
+        register,
+        logout,
+        updateProfile,
+        updatePassword
+    };
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export default AuthContext;

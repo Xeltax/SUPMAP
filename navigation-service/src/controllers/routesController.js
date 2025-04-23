@@ -1,0 +1,449 @@
+const tomtomService = require('../services/tomtomService');
+const Route = require('../models/routeModel');
+const { Sequelize, Op } = require('sequelize');
+const QRCode = require('qrcode');
+
+/**
+ * Calcule un itinéraire entre deux points
+ * @route POST /api/routes/calculate
+ */
+exports.calculateRoute = async (req, res, next) => {
+    try {
+        const {
+            origin,
+            destination,
+            waypoints,
+            routeType,
+            avoidTolls,
+            traffic
+        } = req.body;
+
+        if (!origin || !destination) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Les points d\'origine et de destination sont requis'
+            });
+        }
+
+        // Si les coordonnées sont fournies sous forme d'adresses, les convertir en coordonnées
+        let originCoords = Array.isArray(origin) ? origin : await tomtomService.geocode(origin);
+        let destinationCoords = Array.isArray(destination) ? destination : await tomtomService.geocode(destination);
+
+        // Traiter les waypoints si fournis
+        let waypointCoords = [];
+        if (waypoints && waypoints.length > 0) {
+            waypointCoords = await Promise.all(
+                waypoints.map(async (waypoint) => {
+                    return Array.isArray(waypoint) ? waypoint : await tomtomService.geocode(waypoint);
+                })
+            );
+        }
+
+        // Calculer l'itinéraire
+        const routeData = await tomtomService.calculateRoute({
+            origin: originCoords,
+            destination: destinationCoords,
+            waypoints: waypointCoords,
+            routeType: routeType || 'fastest',
+            avoidTolls: avoidTolls || false,
+            traffic: traffic !== undefined ? traffic : true
+        });
+
+        // Adapter la structure de la réponse pour l'API v1
+        // Note: La structure diffère entre v1 et v2, donc nous normalisons ici
+        const routes = routeData.routes.map(route => {
+            // Extraction des informations de base
+            const summary = {
+                lengthInMeters: route.summary.lengthInMeters,
+                travelTimeInSeconds: route.summary.travelTimeInSeconds,
+                trafficDelayInSeconds: route.summary.trafficDelayInSeconds || 0,
+                departureTime: route.summary.departureTime || new Date().toISOString(),
+                arrivalTime: route.summary.arrivalTime || new Date(Date.now() + route.summary.travelTimeInSeconds * 1000).toISOString()
+            };
+
+            // Adaptation des segments de l'itinéraire (legs)
+            const legs = route.legs.map(leg => {
+                // Extraire les points de l'itinéraire
+                const points = leg.points || [];
+
+                // Extraire les instructions de guidage, si disponibles
+                let instructions = [];
+                if (leg.guidance && leg.guidance.instructions) {
+                    instructions = leg.guidance.instructions.map(instruction => ({
+                        routeOffsetInMeters: instruction.routeOffsetInMeters,
+                        text: instruction.message || instruction.instruction || '',
+                        maneuver: instruction.maneuver || '',
+                        street: instruction.street || ''
+                    }));
+                }
+
+                return {
+                    points,
+                    instructions
+                };
+            });
+
+            return {
+                distance: summary.lengthInMeters,
+                duration: summary.travelTimeInSeconds,
+                trafficDelay: summary.trafficDelayInSeconds,
+                departureTime: summary.departureTime,
+                arrivalTime: summary.arrivalTime,
+                legs
+            };
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                routes
+            }
+        });
+    } catch (error) {
+        console.error('Erreur complète:', error);
+        next(error);
+    }
+};
+
+/**
+ * Recherche un lieu par nom ou adresse
+ * @route GET /api/routes/search
+ */
+exports.searchLocation = async (req, res, next) => {
+    try {
+        const { query, limit, countrySet } = req.query;
+
+        if (!query) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Le terme de recherche est requis'
+            });
+        }
+
+        const results = await tomtomService.searchLocation(query, {
+            limit: limit ? parseInt(limit) : 5,
+            countrySet: countrySet || 'FR'
+        });
+
+        // Formater les résultats pour qu'ils soient plus faciles à utiliser
+        const formattedResults = results.results.map(result => ({
+            id: result.id,
+            name: result.poi ? result.poi.name : result.address.freeformAddress,
+            address: result.address.freeformAddress,
+            position: result.position,
+            type: result.type
+        }));
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                locations: formattedResults
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Enregistre un itinéraire
+ * @route POST /api/routes/save
+ */
+exports.saveRoute = async (req, res, next) => {
+    try {
+        const {
+            name,
+            originName,
+            destinationName,
+            originCoordinates,
+            destinationCoordinates,
+            waypoints,
+            routeData,
+            geometry,
+            distance,
+            duration,
+            avoidTolls,
+            routeType,
+            isFavorite
+        } = req.body;
+
+        // Vérifier les champs obligatoires
+        if (!name || !originName || !destinationName || !originCoordinates || !destinationCoordinates) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Tous les champs obligatoires doivent être fournis'
+            });
+        }
+
+        // Créer un point PostgreSQL pour l'origine et la destination
+        const pgOrigin = {
+            type: 'Point',
+            coordinates: originCoordinates
+        };
+
+        const pgDestination = {
+            type: 'Point',
+            coordinates: destinationCoordinates
+        };
+
+        // Créer une LineString PostgreSQL pour la géométrie de l'itinéraire si fournie
+        let pgGeometry = null;
+        if (geometry && geometry.coordinates && geometry.coordinates.length > 0) {
+            pgGeometry = {
+                type: 'LineString',
+                coordinates: geometry.coordinates
+            };
+        }
+
+        // Extraire l'ID de l'utilisateur depuis le token JWT
+        const userId = req.user.id;
+
+        // Créer l'itinéraire
+        const route = await Route.create({
+            userId,
+            name,
+            originName,
+            destinationName,
+            originCoordinates: pgOrigin,
+            destinationCoordinates: pgDestination,
+            waypoints: waypoints || [],
+            routeData: routeData || null,
+            geometry: pgGeometry,
+            distance: distance || null,
+            duration: duration || null,
+            avoidTolls: avoidTolls || false,
+            routeType: routeType || 'fastest',
+            isFavorite: isFavorite || false,
+            lastUsed: new Date()
+        });
+
+        res.status(201).json({
+            status: 'success',
+            data: {
+                route
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Récupère tous les itinéraires de l'utilisateur
+ * @route GET /api/routes/user
+ */
+exports.getUserRoutes = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+
+        // Options de filtrage et de tri
+        const { favorite, sort, limit, offset } = req.query;
+
+        // Construire les conditions de recherche
+        const where = { userId };
+
+        if (favorite === 'true') {
+            where.isFavorite = true;
+        }
+
+        // Construire les options de tri
+        let order = [['createdAt', 'DESC']];
+
+        if (sort === 'name') {
+            order = [['name', 'ASC']];
+        } else if (sort === 'lastUsed') {
+            order = [['lastUsed', 'DESC']];
+        }
+
+        // Récupérer les itinéraires
+        const routes = await Route.findAndCountAll({
+            where,
+            order,
+            limit: limit ? parseInt(limit) : undefined,
+            offset: offset ? parseInt(offset) : undefined
+        });
+
+        res.status(200).json({
+            status: 'success',
+            results: routes.count,
+            data: {
+                routes: routes.rows
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Récupère un itinéraire spécifique
+ * @route GET /api/routes/:id
+ */
+exports.getRouteById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Récupérer l'itinéraire
+        const route = await Route.findOne({
+            where: {
+                id,
+                userId
+            }
+        });
+
+        if (!route) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Itinéraire non trouvé'
+            });
+        }
+
+        // Mettre à jour la date de dernière utilisation
+        route.lastUsed = new Date();
+        await route.save();
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                route
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Met à jour un itinéraire
+ * @route PATCH /api/routes/:id
+ */
+exports.updateRoute = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const { name, isFavorite } = req.body;
+
+        // Récupérer l'itinéraire
+        const route = await Route.findOne({
+            where: {
+                id,
+                userId
+            }
+        });
+
+        if (!route) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Itinéraire non trouvé'
+            });
+        }
+
+        // Mettre à jour l'itinéraire
+        if (name !== undefined) route.name = name;
+        if (isFavorite !== undefined) route.isFavorite = isFavorite;
+
+        await route.save();
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                route
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Supprime un itinéraire
+ * @route DELETE /api/routes/:id
+ */
+exports.deleteRoute = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Récupérer l'itinéraire
+        const route = await Route.findOne({
+            where: {
+                id,
+                userId
+            }
+        });
+
+        if (!route) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Itinéraire non trouvé'
+            });
+        }
+
+        // Supprimer l'itinéraire
+        await route.destroy();
+
+        res.status(204).json({
+            status: 'success',
+            data: null
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Génère un code QR pour un itinéraire
+ * @route GET /api/routes/qrcode/:id
+ */
+exports.generateQRCode = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Récupérer l'itinéraire
+        const route = await Route.findOne({
+            where: {
+                id,
+                userId
+            }
+        });
+
+        if (!route) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Itinéraire non trouvé'
+            });
+        }
+
+        // Créer les données pour le QR code
+        const qrData = {
+            type: 'route',
+            id: route.id,
+            origin: {
+                name: route.originName,
+                coordinates: route.originCoordinates.coordinates
+            },
+            destination: {
+                name: route.destinationName,
+                coordinates: route.destinationCoordinates.coordinates
+            },
+            options: {
+                avoidTolls: route.avoidTolls,
+                routeType: route.routeType
+            }
+        };
+
+        // Générer le QR code
+        const qrCode = await QRCode.toDataURL(JSON.stringify(qrData));
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                qrCode
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};

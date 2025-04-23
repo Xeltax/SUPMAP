@@ -1,0 +1,15 @@
+# Ignorer tous les node_modules dans tous les services
+**/node_modules/
+
+# Ignorer les fichiers log
+**/*.log
+
+# Ignorer les dossiers de build (optionnel selon ton stack)
+**/dist/
+**/build/
+**/.next/
+.idea
+api-gateway/.env
+auth-service/.env
+navigation-service/.env
+web-client/.env

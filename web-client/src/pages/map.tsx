@@ -33,7 +33,17 @@ import {
     ModalCloseButton,
     ModalFooter,
     FormControl,
-    FormLabel
+    FormLabel,
+    Radio,
+    RadioGroup,
+    Textarea,
+    SimpleGrid,
+    NumberInput,
+    NumberInputField,
+    NumberInputStepper,
+    NumberIncrementStepper,
+    NumberDecrementStepper,
+    VStack,
 } from '@chakra-ui/react';
 import { SearchIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { FaRoute, FaDirections, FaCar, FaExclamationTriangle, FaMapMarkerAlt, FaLayerGroup, FaSave } from 'react-icons/fa';
@@ -54,6 +64,20 @@ interface Location {
         lat: number;
         lon: number;
     };
+}
+
+interface Incident {
+    id: string;
+    userId: string | null;
+    incidentType: string;
+    coordinates: [number, number];
+    description: string;
+    severity: string;
+    validations: number;
+    invalidations: number;
+    active: boolean;
+    expiresAt: string;
+    createdAt: string;
 }
 
 interface RouteInfo {
@@ -98,6 +122,15 @@ const Map = ({ apiKey }: MapPageProps) => {
     const [avoidTolls, setAvoidTolls] = useState(false);
     const [routeType, setRouteType] = useState('fastest');
     const [incidents, setIncidents] = useState<any[]>([]);
+
+    // États relatifs au incident
+    const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+    const [incidentLocation, setIncidentLocation] = useState<[number, number] | null>(null);
+    const [incidentType, setIncidentType] = useState<string>('accident');
+    const [incidentDescription, setIncidentDescription] = useState<string>('');
+    const [incidentSeverity, setIncidentSeverity] = useState<string>('moderate');
+    const [incidentDuration, setIncidentDuration] = useState<number>(60);
+    const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
 
     // Hooks pour les drawers et modals
     const { isOpen: isRouteDrawerOpen, onOpen: onRouteDrawerOpen, onClose: onRouteDrawerClose } = useDisclosure();
@@ -499,74 +532,338 @@ const Map = ({ apiKey }: MapPageProps) => {
                 bounds.getNorth()
             ].join(',');
 
+            // Charger les incidents TomTom
             const response = await api.traffic.getTrafficIncidents(bbox);
 
-            // Vérifier que response.data existe avant d'y accéder
+            console.log(response)
+
+            // Charger les incidents signalés par les utilisateurs
+            const userReportsResponse = await api.traffic.getUserReports({ bbox });
+
+            console.log(userReportsResponse)
+
+            // Vérifier les réponses et combiner les incidents
+            let tomtomIncidents: any[] = [];
             if (response && response.data && response.data.incidents) {
-                setIncidents(response.data.incidents.incidents || []);
+                tomtomIncidents = response.data.incidents.incidents || [];
+            }
 
-                // Supprimer les marqueurs d'incidents existants
-                const markersToRemove = document.querySelectorAll('.incident-marker');
-                markersToRemove.forEach(marker => marker.remove());
+            let userReports: Incident[] = [];
+            if (userReportsResponse && userReportsResponse.data && userReportsResponse.data.incidents) {
+                userReports = userReportsResponse.data.incidents;
+                // Mettre à jour l'état des incidents de l'utilisateur
+                setUserIncidents(userReports.filter(incident =>
+                    incident.userId === (user ? user.id : null)
+                ));
+            }
 
-                // Vérifier que les incidents existent avant de les parcourir
-                if (response.data.incidents.incidents && Array.isArray(response.data.incidents.incidents)) {
-                    response.data.incidents.incidents.forEach((incident: any) => {
-                        let color = '#FFC107'; // Jaune par défaut
+            // Combiner les incidents
+            setIncidents([...tomtomIncidents, ...userReports]);
 
-                        // Couleur selon le type d'incident
-                        if (incident.properties && incident.properties.iconCategory) {
-                            switch (incident.properties.iconCategory) {
-                                case 'accident':
-                                    color = '#DC3545'; // Rouge
-                                    break;
-                                case 'congestion':
-                                    color = '#FD7E14'; // Orange
-                                    break;
-                                case 'roadClosed':
-                                    color = '#6C757D'; // Gris
-                                    break;
-                                case 'roadworks':
-                                    color = '#6610F2'; // Violet
-                                    break;
-                                case 'police':
-                                    color = '#0D6EFD'; // Bleu
-                                    break;
-                            }
-                        }
+            // Supprimer les marqueurs d'incidents existants
+            const markersToRemove = document.querySelectorAll('.incident-marker');
+            markersToRemove.forEach(marker => marker.remove());
 
-                        // Créer le marqueur d'incident
-                        if (incident.geometry && incident.geometry.coordinates) {
-                            const markerElement = document.createElement('div');
-                            markerElement.className = 'incident-marker';
-                            markerElement.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                            </svg>`;
+            // Afficher les incidents TomTom
+            if (tomtomIncidents && Array.isArray(tomtomIncidents)) {
+                tomtomIncidents.forEach(incident => {
+                    displayIncidentMarker(incident, false);
+                });
+            }
 
-                            const marker = new ttObject.Marker({ element: markerElement })
-                                .setLngLat(incident.geometry.coordinates)
-                                .addTo(map);
-
-                            // Ajouter un popup avec les détails de l'incident
-                            if (incident.properties && incident.properties.events && incident.properties.events.length > 0) {
-                                const popup = new ttObject.Popup({ offset: 25 }).setHTML(`
-                                    <div>
-                                        <h3 style="font-weight: bold;">${incident.properties.events[0].description}</h3>
-                                        <p>Type: ${incident.properties.iconCategory}</p>
-                                        ${incident.properties.startTime ? `<p>Depuis: ${new Date(incident.properties.startTime).toLocaleString()}</p>` : ''}
-                                    </div>
-                                `);
-
-                                marker.setPopup(popup);
-                            }
-                        }
-                    });
-                }
+            // Afficher les incidents utilisateur
+            if (userReports && Array.isArray(userReports)) {
+                userReports.forEach(incident => {
+                    displayIncidentMarker(incident, true);
+                });
             }
         } catch (error) {
             console.error('Erreur lors du chargement des incidents:', error);
         }
     };
+
+    const displayIncidentMarker = (incident: any, isUserReport: boolean) => {
+        if (!map || !ttObject) return;
+
+        let coordinates: [number, number] = [0, 0];
+        let color = '#FFC107'; // Jaune par défaut
+        let type = 'incident';
+        let description = 'Incident de trafic';
+        let timeInfo = '';
+        let validations = 0;
+        let invalidations = 0;
+        let severity = '';
+
+        if (isUserReport) {
+            // Format des incidents utilisateur
+            if (!incident.location || !incident.location.coordinates) return;
+
+            coordinates = incident.location.coordinates;
+            type = incident.incidentType;
+            description = incident.description || 'Pas de description';
+            timeInfo = new Date(incident.createdAt).toLocaleString();
+            validations = incident.validations;
+            invalidations = incident.invalidations;
+
+            // Couleur selon le type d'incident
+            switch (type) {
+                case 'accident':
+                    color = '#DC3545'; // Rouge
+                    break;
+                case 'congestion':
+                    color = '#FD7E14'; // Orange
+                    break;
+                case 'roadClosed':
+                    color = '#6C757D'; // Gris
+                    break;
+                case 'roadworks':
+                    color = '#6610F2'; // Violet
+                    break;
+                case 'police':
+                    color = '#0D6EFD'; // Bleu
+                    break;
+                case 'hazard':
+                    color = '#FFC107'; // Jaune
+                    break;
+            }
+        } else {
+            // Format des incidents TomTom
+            if (!incident.geometry || !incident.geometry.coordinates) return;
+
+            // Vérifiez le type de géométrie pour déterminer comment extraire les coordonnées
+            if (incident.geometry.type === "LineString") {
+                // Pour une ligne, utilisez le premier point de la ligne
+                const firstPoint = incident.geometry.coordinates[0];
+                if (Array.isArray(firstPoint) && firstPoint.length >= 2) {
+                    coordinates = [firstPoint[0], firstPoint[1]];
+                } else {
+                    return; // Coordonnées invalides
+                }
+            } else if (incident.geometry.type === "Point") {
+                // Pour un point, utilisez directement les coordonnées
+                coordinates = incident.geometry.coordinates;
+            } else {
+                return; // Type de géométrie non pris en charge
+            }
+
+            if (incident.properties) {
+                // Déterminer le type d'incident basé sur iconCategory
+                if (incident.properties.iconCategory !== undefined) {
+                    const iconCategory = incident.properties.iconCategory;
+                    switch (iconCategory) {
+                        case 1:
+                            type = 'Accident';
+                            color = '#DC3545'; // Rouge
+                            break;
+                        case 2:
+                            type = 'Brouillard';
+                            color = '#ADB5BD'; // Gris clair
+                            break;
+                        case 3:
+                            type = 'Conditions dangereuses';
+                            color = '#FFC107'; // Jaune
+                            break;
+                        case 4:
+                            type = 'Pluie';
+                            color = '#0DCAF0'; // Cyan
+                            break;
+                        case 5:
+                            type = 'Verglas';
+                            color = '#0DCAF0'; // Cyan
+                            break;
+                        case 6:
+                            type = 'Embouteillage';
+                            color = '#FD7E14'; // Orange
+                            break;
+                        case 7:
+                            type = 'Voie fermée';
+                            color = '#6C757D'; // Gris
+                            break;
+                        case 8:
+                            type = 'Route fermée';
+                            color = '#343A40'; // Noir
+                            break;
+                        case 9:
+                            type = 'Travaux';
+                            color = '#6610F2'; // Violet
+                            break;
+                        case 10:
+                            type = 'Vent';
+                            color = '#20C997'; // Vert teal
+                            break;
+                        case 11:
+                            type = 'Inondation';
+                            color = '#0D6EFD'; // Bleu
+                            break;
+                        case 14:
+                            type = 'Véhicule en panne';
+                            color = '#FD7E14'; // Orange
+                            break;
+                        default:
+                            type = 'Incident';
+                            color = '#FFC107'; // Jaune
+                    }
+                }
+
+                // Déterminer la sévérité basée sur magnitudeOfDelay
+                if (incident.properties.magnitudeOfDelay !== undefined) {
+                    const magnitude = incident.properties.magnitudeOfDelay;
+                    switch (magnitude) {
+                        case 1:
+                            severity = 'Mineur';
+                            break;
+                        case 2:
+                            severity = 'Modéré';
+                            break;
+                        case 3:
+                            severity = 'Majeur';
+                            break;
+                        case 4:
+                            severity = 'Indéfini';
+                            break;
+                        default:
+                            severity = 'Inconnu';
+                    }
+                }
+
+                // Extraire la description des événements
+                if (incident.properties.events && incident.properties.events.length > 0) {
+                    // Utiliser la description du premier événement
+                    description = incident.properties.events[0].description || type;
+
+                    // Si plusieurs événements, ajouter la description du deuxième
+                    if (incident.properties.events.length > 1 && incident.properties.events[1].description) {
+                        description += ` - ${incident.properties.events[1].description}`;
+                    }
+                }
+
+                // Formater les horodatages
+                if (incident.properties.startTime) {
+                    const startDate = new Date(incident.properties.startTime);
+                    timeInfo = `Début: ${startDate.toLocaleString()}`;
+
+                    if (incident.properties.endTime) {
+                        const endDate = new Date(incident.properties.endTime);
+                        timeInfo += `<br>Fin: ${endDate.toLocaleString()}`;
+                    }
+                }
+            }
+        }
+
+        // Créer le marqueur d'incident avec une icône personnalisée basée sur le type
+        const markerElement = document.createElement('div');
+        markerElement.className = 'incident-marker';
+
+        // Différentes icônes selon le type d'incident
+        let svgIcon = '';
+        if (type.toLowerCase().includes('accident')) {
+            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+        </svg>`;
+        } else if (type.toLowerCase().includes('fermée') || type.toLowerCase().includes('roadclosed')) {
+            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
+        </svg>`;
+        } else if (type.toLowerCase().includes('travaux') || type.toLowerCase().includes('roadworks')) {
+            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+            <path d="M19.4 10c-0.7-3.4-3.7-6-7.4-6-2.5 0-4.7 1.2-6.1 3.1l1.3 1.5c1.1-1.4 2.8-2.3 4.7-2.3 3.1 0 5.6 2.3 5.9 5.3l-2.1-0.8-0.7 1.7 4 1.6 1.6-4-1.7-0.7-0.9 2.3c-0.7-3.2-3.6-5.6-7.1-5.6-3.4 0-6.3 2.3-7.1 5.4l1.9 0.5c0.5-2.1 2.4-3.7 4.7-3.7 2.7 0 4.8 2.1 4.8 4.8s-2.1 4.8-4.8 4.8c-2.2 0-4.1-1.5-4.6-3.5h-2c0.5 3.2 3.3 5.5 6.6 5.5 3.7 0 6.7-3 6.7-6.7 0-0.6-0.1-1.2-0.2-1.7l1.5 0.6z"/>
+        </svg>`;
+        } else if (type.toLowerCase().includes('embouteillage') || type.toLowerCase().includes('congestion')) {
+            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+            <path d="M20 10h-3V8.86c1.72-.45 3-2 3-3.86h-3V4c0-.55-.45-1-1-1H8c-.55 0-1 .45-1 1v1H4c0 1.86 1.28 3.41 3 3.86V10H4c0 1.86 1.28 3.41 3 3.86V15H4c0 1.86 1.28 3.41 3 3.86V20c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-1.14c1.72-.45 3-2 3-3.86h-3v-1.14c1.72-.45 3-2 3-3.86zm-5 9H9V5h6v14z"/>
+        </svg>`;
+        } else {
+            // Icône par défaut pour les autres types
+            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>`;
+        }
+
+        markerElement.innerHTML = svgIcon;
+
+        const marker = new ttObject.Marker({ element: markerElement })
+            .setLngLat(coordinates)
+            .addTo(map);
+
+        // Ajouter un popup avec les détails de l'incident
+        const popupContent = `
+            <div style="max-width: 250px; color: black">
+                <h3 style="font-weight: bold; margin-bottom: 8px;">${description}</h3>
+                <p><strong>Type:</strong> ${type}</p>
+                ${severity ? `<p><strong>Sévérité:</strong> ${severity}</p>` : ''}
+                <p><strong>Date:</strong> ${timeInfo}</p>
+                ${isUserReport ? `
+                    <p><strong>Validations:</strong> ${validations} | <strong>Invalidations:</strong> ${invalidations}</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                        <button id="validate-${incident.id}" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Valider</button>
+                        <button id="invalidate-${incident.id}" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Invalider</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        const popup = new ttObject.Popup({ offset: 25 })
+            .setHTML(popupContent);
+
+        marker.setPopup(popup);
+
+        // Ajouter des écouteurs d'événements pour les boutons de validation/invalidation
+        if (isUserReport) {
+            marker.getPopup().on('open', () => {
+                setTimeout(() => {
+                    const validateButton = document.getElementById(`validate-${incident.id}`);
+                    const invalidateButton = document.getElementById(`invalidate-${incident.id}`);
+
+                    if (validateButton) {
+                        validateButton.addEventListener('click', async () => {
+                            try {
+                                await api.traffic.validateIncidentReport(incident.id);
+                                toast({
+                                    title: 'Incident validé',
+                                    status: 'success',
+                                    duration: 2000,
+                                    isClosable: true,
+                                });
+                                loadIncidents(); // Recharger les incidents pour mettre à jour les compteurs
+                            } catch (error) {
+                                console.error('Erreur lors de la validation:', error);
+                            }
+                        });
+                    }
+
+                    if (invalidateButton) {
+                        invalidateButton.addEventListener('click', async () => {
+                            try {
+                                await api.traffic.invalidateIncidentReport(incident.id);
+                                toast({
+                                    title: 'Incident invalidé',
+                                    status: 'success',
+                                    duration: 2000,
+                                    isClosable: true,
+                                });
+                                loadIncidents(); // Recharger les incidents pour mettre à jour les compteurs
+                            } catch (error) {
+                                console.error('Erreur lors de l\'invalidation:', error);
+                            }
+                        });
+                    }
+                }, 100);
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (map) {
+            loadIncidents();
+
+            // Recharger les incidents lors du déplacement de la carte
+            map.on('moveend', loadIncidents);
+
+            return () => {
+                map.off('moveend', loadIncidents);
+            };
+        }
+    }, [map]);
 
     // Activer/désactiver le mode d'itinéraire
     const toggleRoutingMode = () => {
@@ -622,15 +919,57 @@ const Map = ({ apiKey }: MapPageProps) => {
     };
 
     // Signaler un incident
-    const reportIncident = (type: string, location: [number, number]) => {
-        // Implémenter la logique de signalement d'incident
-        toast({
-            title: "Fonctionnalité à venir",
-            description: "Le signalement d'incidents sera disponible prochainement",
-            status: "info",
-            duration: 3000,
-            isClosable: true,
-        });
+    const openIncidentReportModal = (location: [number, number]) => {
+        setIncidentLocation(location);
+        setIncidentType('accident');
+        setIncidentDescription('');
+        setIncidentSeverity('moderate');
+        setIncidentDuration(60);
+        setIsIncidentModalOpen(true);
+    };
+
+    const reportIncident = async () => {
+        if (!incidentLocation || !incidentType) return;
+
+        setIsLoading(true);
+        try {
+            const response = await api.traffic.reportTrafficIncident({
+                incidentType,
+                coordinates: incidentLocation,
+                description: incidentDescription,
+                severity: incidentSeverity,
+                durationMinutes: incidentDuration
+            });
+
+            if (response && response.data && response.data.incident) {
+                toast({
+                    title: 'Incident signalé',
+                    description: 'Votre signalement a été enregistré avec succès',
+                    status: 'success',
+                    duration: 3000,
+                    isClosable: true,
+                });
+
+                // Fermer le modal et recharger les incidents
+                setIsIncidentModalOpen(false);
+                loadIncidents();
+
+                // Ajouter le nouvel incident à la liste des incidents de l'utilisateur
+                const newIncident = response.data.incident;
+                setUserIncidents(prev => [newIncident, ...prev]);
+            }
+        } catch (error) {
+            console.error('Erreur lors du signalement de l\'incident:', error);
+            toast({
+                title: 'Erreur',
+                description: 'Impossible de signaler l\'incident',
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Sauvegarder l'itinéraire
@@ -798,7 +1137,7 @@ const Map = ({ apiKey }: MapPageProps) => {
                         colorScheme="orange"
                         size="lg"
                         disabled={!userLocation}
-                        onClick={() => map && userLocation && reportIncident('accident', userLocation)}
+                        onClick={() => userLocation && openIncidentReportModal(userLocation)}
                     />
                 </Flex>
 
@@ -941,6 +1280,82 @@ const Map = ({ apiKey }: MapPageProps) => {
                         </DrawerBody>
                     </DrawerContent>
                 </Drawer>
+
+                <Modal isOpen={isIncidentModalOpen} onClose={() => setIsIncidentModalOpen(false)}>
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>Signaler un incident</ModalHeader>
+                        <ModalCloseButton />
+                        <ModalBody>
+                            <VStack spacing={4} align="stretch">
+                                <FormControl>
+                                    <FormLabel>Type d'incident</FormLabel>
+                                    <RadioGroup value={incidentType} onChange={setIncidentType}>
+                                        <SimpleGrid columns={2} spacing={2}>
+                                            <Radio value="accident">Accident</Radio>
+                                            <Radio value="congestion">Embouteillage</Radio>
+                                            <Radio value="roadClosed">Route fermée</Radio>
+                                            <Radio value="roadworks">Travaux</Radio>
+                                            <Radio value="police">Contrôle policier</Radio>
+                                            <Radio value="hazard">Obstacle</Radio>
+                                        </SimpleGrid>
+                                    </RadioGroup>
+                                </FormControl>
+
+                                <FormControl>
+                                    <FormLabel>Description (optionnelle)</FormLabel>
+                                    <Textarea
+                                        placeholder="Décrivez l'incident..."
+                                        value={incidentDescription}
+                                        onChange={(e) => setIncidentDescription(e.target.value)}
+                                    />
+                                </FormControl>
+
+                                <FormControl>
+                                    <FormLabel>Gravité</FormLabel>
+                                    <RadioGroup value={incidentSeverity} onChange={setIncidentSeverity}>
+                                        <SimpleGrid columns={2} spacing={2}>
+                                            <Radio value="low">Faible</Radio>
+                                            <Radio value="moderate">Modérée</Radio>
+                                            <Radio value="high">Élevée</Radio>
+                                            <Radio value="severe">Sévère</Radio>
+                                        </SimpleGrid>
+                                    </RadioGroup>
+                                </FormControl>
+
+                                <FormControl>
+                                    <FormLabel>Durée estimée (minutes)</FormLabel>
+                                    <NumberInput
+                                        min={15}
+                                        max={240}
+                                        step={15}
+                                        value={incidentDuration}
+                                        onChange={(_, value) => setIncidentDuration(value)}
+                                    >
+                                        <NumberInputField />
+                                        <NumberInputStepper>
+                                            <NumberIncrementStepper />
+                                            <NumberDecrementStepper />
+                                        </NumberInputStepper>
+                                    </NumberInput>
+                                </FormControl>
+                            </VStack>
+                        </ModalBody>
+
+                        <ModalFooter>
+                            <Button variant="ghost" mr={3} onClick={() => setIsIncidentModalOpen(false)}>
+                                Annuler
+                            </Button>
+                            <Button
+                                colorScheme="orange"
+                                onClick={reportIncident}
+                                isLoading={isLoading}
+                            >
+                                Signaler
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
 
                 {/* Panneau des calques */}
                 <Drawer

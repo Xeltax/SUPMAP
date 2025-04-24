@@ -196,7 +196,17 @@ exports.saveRoute = async (req, res, next) => {
         }
 
         // Extraire l'ID de l'utilisateur depuis le token JWT
-        const userId = req.user.id;
+        const userId = req.headers['x-user-id'];
+
+        console.log("pass here")
+        console.log("userId", userId)
+
+        if (!userId) {
+            return res.status(401).json({
+                status: 'error',
+                message: 'Utilisateur non authentifié'
+            });
+        }
 
         // Créer l'itinéraire
         const route = await Route.create({
@@ -217,6 +227,8 @@ exports.saveRoute = async (req, res, next) => {
             lastUsed: new Date()
         });
 
+        console.log("route", route)
+
         res.status(201).json({
             status: 'success',
             data: {
@@ -234,7 +246,7 @@ exports.saveRoute = async (req, res, next) => {
  */
 exports.getUserRoutes = async (req, res, next) => {
     try {
-        const userId = req.user.id;
+        const userId = req.headers['x-user-id'];
 
         // Options de filtrage et de tri
         const { favorite, sort, limit, offset } = req.query;
@@ -263,6 +275,8 @@ exports.getUserRoutes = async (req, res, next) => {
             offset: offset ? parseInt(offset) : undefined
         });
 
+        console.log()
+
         res.status(200).json({
             status: 'success',
             results: routes.count,
@@ -282,7 +296,7 @@ exports.getUserRoutes = async (req, res, next) => {
 exports.getRouteById = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const userId = req.user.id;
+        const userId = req.headers['x-user-id'];
 
         // Récupérer l'itinéraire
         const route = await Route.findOne({
@@ -321,7 +335,7 @@ exports.getRouteById = async (req, res, next) => {
 exports.updateRoute = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const userId = req.user.id;
+        const userId = req.headers['x-user-id'];
         const { name, isFavorite } = req.body;
 
         // Récupérer l'itinéraire
@@ -363,7 +377,7 @@ exports.updateRoute = async (req, res, next) => {
 exports.deleteRoute = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const userId = req.user.id;
+        const userId = req.headers['x-user-id'];
 
         // Récupérer l'itinéraire
         const route = await Route.findOne({
@@ -399,7 +413,7 @@ exports.deleteRoute = async (req, res, next) => {
 exports.generateQRCode = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const userId = req.user.id;
+        const userId = req.headers['x-user-id'];
 
         // Récupérer l'itinéraire
         const route = await Route.findOne({

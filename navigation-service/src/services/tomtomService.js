@@ -9,7 +9,7 @@ class TomTomService {
         this.baseUrl = 'https://api.tomtom.com';
         this.routingVersion = '1'; // Version 1 pour l'API de routage
         this.searchVersion = '2';  // Version 2 pour l'API de recherche
-        this.trafficVersion = '2'; // Version 2 pour l'API de trafic
+        this.trafficVersion = '5'; // Version 2 pour l'API de trafic
     }
 
     /**
@@ -92,7 +92,87 @@ class TomTomService {
     }
 
     /**
-     * Obtient des informations sur le trafic dans une zone spécifique
+     * Obtient des informations sur les incidents de trafic dans une zone spécifique
+     * @param {Object} options - Options de la requête
+     * @param {Array} options.bbox - Boîte englobante [minLon, minLat, maxLon, maxLat]
+     * @param {String} options.incidentType - Type d'incident (all, accidents, congestion, construction, etc.)
+     * @param {Number} options.maxResults - Nombre maximum de résultats à retourner
+     * @param {String} options.timeValidityFilter - Filtre de validité temporelle (present, future ou all)
+     * @returns {Promise<Object>} Données des incidents
+     */
+    async getTrafficIncidents(options) {
+        try {
+            const {
+                bbox,
+                incidentType = 'all',
+                maxResults = 100,
+                timeValidityFilter = 'present'
+            } = options;
+
+            if (!bbox || bbox.length !== 4) {
+                throw new Error('La boîte englobante (bbox) doit contenir 4 valeurs [minLon, minLat, maxLon, maxLat]');
+            }
+
+            // Vérifier que les valeurs du bbox sont valides
+            const [minLon, minLat, maxLon, maxLat] = bbox;
+            if (minLon > maxLon || minLat > maxLat) {
+                throw new Error('Valeurs de bbox invalides: minLon doit être <= maxLon et minLat doit être <= maxLat');
+            }
+
+            // Effectuer la requête à l'API TomTom
+            const client = this.createApiClient();
+            const response = await client.get(`/traffic/services/${this.trafficVersion}/incidentDetails`, {
+                params: {
+                    bbox: bbox.join(','),
+                    language: 'fr-FR',
+                    timeValidityFilter,
+                    maxResults,
+                    fields: '{incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code,iconCategory},startTime,endTime}}}',
+                    expandCluster: true
+                }
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des incidents de trafic:', error.message);
+            if (error.response) {
+                console.error('Réponse d\'erreur:', error.response.data);
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Obtient les détails d'un incident spécifique
+     * @param {String} incidentId - Identifiant unique de l'incident
+     * @returns {Promise<Object>} Détails de l'incident
+     */
+    async getIncidentDetails(incidentId) {
+        try {
+            if (!incidentId) {
+                throw new Error('L\'identifiant de l\'incident est requis');
+            }
+
+            // Effectuer la requête à l'API TomTom
+            const client = this.createApiClient();
+            const response = await client.get(`/traffic/services/${this.trafficVersion}/incidentDetails/${incidentId}`, {
+                params: {
+                    language: 'fr-FR'
+                }
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des détails de l\'incident:', error.message);
+            if (error.response) {
+                console.error('Réponse d\'erreur:', error.response.data);
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Obtient des informations sur le flux de trafic dans une zone spécifique
      * @param {Object} options - Options de la requête
      * @param {Array} options.bbox - Boîte englobante [minLon, minLat, maxLon, maxLat]
      * @param {Number} options.zoom - Niveau de zoom (0-22)
@@ -108,8 +188,9 @@ class TomTomService {
 
             // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
-            const response = await client.get(`/traffic/${this.trafficVersion}/flowSegmentData/relative/bbox/${bbox.join('/')}/json`, {
+            const response = await client.get(`/traffic/services/${this.trafficVersion}/flowSegmentData/relative`, {
                 params: {
+                    bbox: bbox.join(','),
                     unit: 'KMPH', // Unité de vitesse
                     zoom: zoom
                 }
@@ -126,35 +207,44 @@ class TomTomService {
     }
 
     /**
-     * Obtient des informations sur les incidents de trafic dans une zone spécifique
+     * Obtient des incidents de trafic le long d'un itinéraire
      * @param {Object} options - Options de la requête
-     * @param {Array} options.bbox - Boîte englobante [minLon, minLat, maxLon, maxLat]
-     * @param {String} options.incidentType - Type d'incident (all, accidents, congestion, construction, etc.)
-     * @returns {Promise<Object>} Données des incidents
+     * @param {Array} options.points - Tableau de points définissant l'itinéraire [[lon1,lat1], [lon2,lat2], ...]
+     * @param {Number} options.width - Largeur du corridor en mètres (de 0 à 50000)
+     * @param {String} options.incidentType - Type d'incident (all, accidents, congestion, etc.)
+     * @returns {Promise<Object>} Incidents le long de l'itinéraire
      */
-    async getTrafficIncidents(options) {
+    async getRouteIncidents(options) {
         try {
             const {
-                bbox,
+                points,
+                width = 1000,
                 incidentType = 'all'
             } = options;
 
-            if (!bbox || bbox.length !== 4) {
-                throw new Error('La boîte englobante (bbox) doit contenir 4 valeurs [minLon, minLat, maxLon, maxLat]');
+            if (!points || !Array.isArray(points) || points.length < 2) {
+                throw new Error('Au moins deux points sont requis pour définir un itinéraire');
             }
+
+            // Créer la chaîne de points pour l'API
+            const pointsArray = points.map(point => `${point[1]},${point[0]}`);
 
             // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
-            const response = await client.get(`/traffic/${this.trafficVersion}/incidents/s3/${bbox.join('/')}/all/json`, {
+            const response = await client.get(`/traffic/services/${this.trafficVersion}/incidentDetails`, {
                 params: {
-                    language: 'fr-FR', // Langue des descriptions d'incidents
-                    timeValidityFilter: 'present' // Incidents actuels uniquement
+                    point: pointsArray.join(':'),
+                    radius: width,
+                    incidentType,
+                    expandCluster: true,
+                    language: 'fr-FR',
+                    fields: '{incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events,startTime,endTime}}}'
                 }
             });
 
             return response.data;
         } catch (error) {
-            console.error('Erreur lors de la récupération des incidents de trafic:', error.message);
+            console.error('Erreur lors de la récupération des incidents sur l\'itinéraire:', error.message);
             if (error.response) {
                 console.error('Réponse d\'erreur:', error.response.data);
             }

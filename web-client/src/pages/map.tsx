@@ -199,53 +199,82 @@ const Map = ({ apiKey }: MapPageProps) => {
 
         // Fonction de gestion du clic
         const handleMapClick = (e: any) => {
-            if (!isRoutingMode) return;
-
             // Récupérer les coordonnées du clic
             const coords = e.lngLat;
+            const clickedCoords: [number, number] = [coords.lng, coords.lat];
 
-            // Convertir les coordonnées en adresse (reverse geocoding)
-            import('@tomtom-international/web-sdk-services').then(ttServices => {
-                const reverseGeocodingOptions = {
-                    key: apiKey,
-                    position: coords
-                };
+            if (isRoutingMode) {
+                // Mode itinéraire
+                // Convertir les coordonnées en adresse (reverse geocoding)
+                import('@tomtom-international/web-sdk-services').then(ttServices => {
+                    const reverseGeocodingOptions = {
+                        key: apiKey,
+                        position: coords
+                    };
 
-                ttServices.services.reverseGeocode(reverseGeocodingOptions)
-                    .then(response => {
-                        if (response && response.addresses && response.addresses.length > 0) {
-                            const address = response.addresses[0];
-                            const location = {
-                                id: `manual-${Date.now()}`,
-                                name: address.address.freeformAddress || 'Point sélectionné',
-                                address: address.address.freeformAddress || '',
-                                position: {
-                                    lat: coords.lat,
-                                    lon: coords.lng
+                    ttServices.services.reverseGeocode(reverseGeocodingOptions)
+                        .then(response => {
+                            if (response && response.addresses && response.addresses.length > 0) {
+                                const address = response.addresses[0];
+                                const location = {
+                                    id: `manual-${Date.now()}`,
+                                    name: address.address.freeformAddress || 'Point sélectionné',
+                                    address: address.address.freeformAddress || '',
+                                    position: {
+                                        lat: coords.lat,
+                                        lon: coords.lng
+                                    }
+                                };
+
+                                // Utiliser l'étape actuelle pour déterminer où placer le point
+                                if (routingStep === 'start') {
+                                    setStartMarkerOnMap(location);
+                                    setRoutingStep('end');
+                                } else {
+                                    setEndMarkerOnMap(location);
+                                    // Rester sur l'étape end pour permettre de changer la destination
                                 }
-                            };
-
-                            // Utiliser l'étape actuelle pour déterminer où placer le point
-                            if (routingStep === 'start') {
-                                setStartMarkerOnMap(location);
-                                setRoutingStep('end');
-                            } else {
-                                setEndMarkerOnMap(location);
-                                // Rester sur l'étape end pour permettre de changer la destination
                             }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur lors du reverse geocoding:', error);
-                        toast({
-                            title: 'Erreur',
-                            description: 'Impossible de récupérer l\'adresse pour ce point',
-                            status: 'error',
-                            duration: 3000,
-                            isClosable: true,
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors du reverse geocoding:', error);
+                            toast({
+                                title: 'Erreur',
+                                description: 'Impossible de récupérer l\'adresse pour ce point',
+                                status: 'error',
+                                duration: 3000,
+                                isClosable: true,
+                            });
                         });
-                    });
-            });
+                });
+            } else {
+                // Si non en mode routage, proposer d'ajouter un incident à cet endroit
+                // Afficher un petit popup de confirmation
+                const popupContent = `
+                <div style="text-align: center; padding: 5px; color: black;">
+                    <h4>Signaler un incident ici?</h4>
+                    <button id="report-incident-btn" style="background-color: #FF6B00; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-top: 5px;">
+                        Signaler
+                    </button>
+                </div>
+                `;
+
+                const popup = new ttObject.Popup({ closeButton: true, closeOnClick: true, offset: 25 })
+                    .setLngLat(clickedCoords)
+                    .setHTML(popupContent)
+                    .addTo(map);
+
+                // Ajouter un écouteur d'événement au bouton dans le popup
+                setTimeout(() => {
+                    const reportButton = document.getElementById('report-incident-btn');
+                    if (reportButton) {
+                        reportButton.addEventListener('click', () => {
+                            popup.remove();
+                            openIncidentReportModal(clickedCoords);
+                        });
+                    }
+                }, 100);
+            }
         };
 
         // Supprimer l'ancien écouteur et ajouter le nouveau
@@ -535,8 +564,6 @@ const Map = ({ apiKey }: MapPageProps) => {
             // Charger les incidents TomTom
             const response = await api.traffic.getTrafficIncidents(bbox);
 
-            console.log(response)
-
             // Charger les incidents signalés par les utilisateurs
             const userReportsResponse = await api.traffic.getUserReports({ bbox });
 
@@ -761,17 +788,20 @@ const Map = ({ apiKey }: MapPageProps) => {
             <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
         </svg>`;
         } else if (type.toLowerCase().includes('fermée') || type.toLowerCase().includes('roadclosed')) {
-            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
-        </svg>`;
+            svgIcon = `<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="24" height="24"><g><g><path d="M23.707 1.707c0.391 -0.391 0.391 -1.024 0 -1.414s-1.024 -0.391 -1.414 0l-2.545 2.545C17.657 1.068 14.954 0 12 0 5.373 0 0 5.373 0 12c0 2.954 1.068 5.657 2.838 7.748L0.293 22.293c-0.391 0.391 -0.391 1.024 0 1.414s1.024 0.391 1.414 0l2.545 -2.545C6.343 22.932 9.046 24 12 24c6.627 0 12 -5.373 12 -12 0 -2.954 -1.068 -5.657 -2.838 -7.748zM2 12c0 -5.523 4.477 -10 10 -10 2.401 0 4.605 0.847 6.328 2.257l-2.524 2.524c-0.37 -0.481 -0.949 -0.782 -1.585 -0.782h-4.439c-0.918 0 -1.718 0.625 -1.94 1.516l-0.621 2.485c0 -0.001 -0.22 -0.001 -0.22 -0.001 -1.104 0 -2 0.896 -2 2v3c0 0.703 0.362 1.32 0.91 1.677l-1.652 1.652C2.847 16.605 2 14.401 2 12m14.781 -0.001h0.219v3H10.415l4.445 -4.445c0.246 0.853 1.028 1.445 1.921 1.445m-9.781 3v-3h0.22c0.917 0 1.716 -0.624 1.94 -1.513l0.621 -2.487c0 0 4.439 0 4.439 0 0 0 0.028 0.114 0.073 0.294L7.586 14.999zM22 12c0 5.523 -4.477 10 -10 10 -2.401 0 -4.605 -0.847 -6.328 -2.257l1.86 -1.86A0.994 0.994 0 0 0 8 18c0.552 0 1 -0.448 1 -1v-0.001h6v0.001c0 0.552 0.448 1 1 1s1 -0.448 1 -1v-0.001c1.105 0 2 -0.895 2 -2v-3c0 -1.104 -0.895 -2 -2 -2h-0.219l-0.273 -1.093 3.235 -3.235c1.411 1.724 2.257 3.927 2.257 6.328"/></g></g></svg>`;
         } else if (type.toLowerCase().includes('travaux') || type.toLowerCase().includes('roadworks')) {
-            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
-            <path d="M19.4 10c-0.7-3.4-3.7-6-7.4-6-2.5 0-4.7 1.2-6.1 3.1l1.3 1.5c1.1-1.4 2.8-2.3 4.7-2.3 3.1 0 5.6 2.3 5.9 5.3l-2.1-0.8-0.7 1.7 4 1.6 1.6-4-1.7-0.7-0.9 2.3c-0.7-3.2-3.6-5.6-7.1-5.6-3.4 0-6.3 2.3-7.1 5.4l1.9 0.5c0.5-2.1 2.4-3.7 4.7-3.7 2.7 0 4.8 2.1 4.8 4.8s-2.1 4.8-4.8 4.8c-2.2 0-4.1-1.5-4.6-3.5h-2c0.5 3.2 3.3 5.5 6.6 5.5 3.7 0 6.7-3 6.7-6.7 0-0.6-0.1-1.2-0.2-1.7l1.5 0.6z"/>
-        </svg>`;
+            svgIcon = `<svg width="24px" height="24px" viewBox="0 0 24 24" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
+             <g transform="translate(0 -1028.4)">
+              <path d="m10.286 1030.4-5.3466 18h5.3466 3.564 5.346l-5.346-18h-3.564z" fill="#ecf0f1"/>
+              <path d="m4 19l-2 2h20l-2-2h-16z" transform="translate(0 1028.4)" fill="#f39c12"/>
+              <path d="m10.286 1030.4-0.8913 3h5.3463l-0.891-3h-3.564zm-2.0886 7-1.1974 4h10.136l-1.198-4h-7.7406zm-2.3669 8-0.8911 3h5.3466 3.564 5.346l-0.891-3h-12.474z" fill="#e67e22"/>
+              <path d="m10.286 1030.4-5.3466 18h5.3466 1.782v-18h-1.782z" fill="#bdc3c7"/>
+              <path d="m10.286 1030.4-0.8913 3h2.6733v-3h-1.782zm-2.0886 7-1.1974 4h5.068v-4h-3.8706zm-2.3669 8-0.8911 3h5.3466 1.782v-3h-6.2375z" fill="#d35400"/>
+              <rect height="1" width="20" y="0" x="0" fill="#e67e22"/>
+             </g>
+            </svg>`;
         } else if (type.toLowerCase().includes('embouteillage') || type.toLowerCase().includes('congestion')) {
-            svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
-            <path d="M20 10h-3V8.86c1.72-.45 3-2 3-3.86h-3V4c0-.55-.45-1-1-1H8c-.55 0-1 .45-1 1v1H4c0 1.86 1.28 3.41 3 3.86V10H4c0 1.86 1.28 3.41 3 3.86V15H4c0 1.86 1.28 3.41 3 3.86V20c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-1.14c1.72-.45 3-2 3-3.86h-3v-1.14c1.72-.45 3-2 3-3.86zm-5 9H9V5h6v14z"/>
-        </svg>`;
+            svgIcon = `<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 301.397 301.397;" xml:space="preserve" width="24" height="24"><g id="XMLID_1400_"><g><g><path d="M22.861 7.417 21.736 1.487a0.621 0.621 0 0 0 -0.61 -0.505H9.727a0.621 0.621 0 0 0 -0.61 0.505l-0.957 5.044h1.264l0.817 -4.308h6.325a1.25 1.25 0 0 0 -0.112 0.517c0 0.692 0.561 1.253 1.253 1.253s1.253 -0.561 1.253 -1.253c0 -0.184 -0.04 -0.359 -0.112 -0.517h1.764l0.89 4.692c-0.161 -0.014 -0.192 -0.01 -0.743 -0.01l-0.005 -1.089c-0.004 -0.785 -0.646 -1.423 -1.43 -1.423h-3.245c-0.785 0 -1.426 0.638 -1.43 1.423l-0.004 0.758a1.672 1.672 0 0 1 0.68 0.331 1.669 1.669 0 0 1 0.591 0.987l1.054 5.555a3.743 3.743 0 0 1 0.169 0.166h2.355v1.306c0 0.828 0.671 1.499 1.499 1.499s1.499 -0.671 1.499 -1.499v-1.306h0.487c0.564 0 1.022 -0.457 1.022 -1.022v-2.957c0 -0.914 -0.449 -1.722 -1.139 -2.218m-1.825 4.462c-0.781 0 -1.415 -0.633 -1.415 -1.415q0 -0.005 0 -0.01c0.006 -0.777 0.637 -1.404 1.415 -1.404 0.781 0 1.415 0.633 1.415 1.415 0 0.776 -0.629 1.415 -1.415 1.415"/><path d="m16.008 14.017 -1.125 -5.929a0.621 0.621 0 0 0 -0.61 -0.505H2.874a0.621 0.621 0 0 0 -0.61 0.505l-1.125 5.929A2.73 2.73 0 0 0 0 16.235v2.957c0 0.564 0.457 1.022 1.022 1.022h0.487v1.306c0 0.828 0.671 1.499 1.499 1.499s1.499 -0.671 1.499 -1.499V20.213h8.135v1.306c0 0.828 0.671 1.499 1.499 1.499s1.499 -0.671 1.499 -1.499V20.213h0.487c0.564 0 1.022 -0.457 1.022 -1.022v-2.957a2.73 2.73 0 0 0 -1.139 -2.218M2.965 18.479c-0.786 0 -1.415 -0.639 -1.415 -1.415 0 -0.781 0.633 -1.415 1.415 -1.415 0.778 0 1.409 0.628 1.415 1.404q0 0.005 0 0.01c0 0.781 -0.633 1.415 -1.415 1.415m9.507 -7.486h-3.245c-0.785 0 -1.426 0.638 -1.43 1.423l-0.005 1.089c-5.509 0 -5.115 -0.005 -5.294 0.01l0.89 -4.692h6.325a1.25 1.25 0 0 0 -0.112 0.517c0 0.692 0.561 1.253 1.253 1.253s1.253 -0.561 1.253 -1.253c0 -0.184 -0.04 -0.359 -0.112 -0.517h1.764l0.89 4.692c-0.16 -0.013 -0.191 -0.01 -0.743 -0.01l-0.005 -1.089c-0.004 -0.785 -0.645 -1.423 -1.43 -1.423m1.711 7.486c-0.781 0 -1.415 -0.633 -1.415 -1.415q0 -0.005 0 -0.01c0.006 -0.777 0.637 -1.404 1.415 -1.404 0.781 0 1.415 0.633 1.415 1.415 0 0.776 -0.629 1.415 -1.415 1.415"/></g></g></g></svg>`;
         } else {
             // Icône par défaut pour les autres types
             svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
@@ -857,7 +887,9 @@ const Map = ({ apiKey }: MapPageProps) => {
             loadIncidents();
 
             // Recharger les incidents lors du déplacement de la carte
-            map.on('moveend', loadIncidents);
+            map.on('moveend', () => {
+                loadIncidents()
+            });
 
             return () => {
                 map.off('moveend', loadIncidents);
@@ -1130,14 +1162,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                         size="lg"
                         mb={2}
                         onClick={onLayerDrawerOpen}
-                    />
-                    <IconButton
-                        aria-label="Signaler un incident"
-                        icon={<FaExclamationTriangle />}
-                        colorScheme="orange"
-                        size="lg"
-                        disabled={!userLocation}
-                        onClick={() => userLocation && openIncidentReportModal(userLocation)}
                     />
                 </Flex>
 

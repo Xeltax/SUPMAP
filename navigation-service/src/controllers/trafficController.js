@@ -187,7 +187,7 @@ exports.reportTrafficIncident = async (req, res, next) => {
         expiresAt.setMinutes(expiresAt.getMinutes() + (durationMinutes || 60));
 
         // Extraire l'ID de l'utilisateur depuis le token JWT
-        const userId = req.user.id;
+        const userId = req.headers['x-user-id'];
 
         // Créer l'incident
         const incident = await Incident.create({

@@ -4,7 +4,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const winston = require('winston');
-const { Sequelize } = require('sequelize');
+const sequelize = require('./config/database');
+const Route = require('./models/routeModel');
+const Incident = require('./models/incidentModel');
 
 // Routes
 const routesRoutes = require('./routes/routesRoutes');
@@ -24,24 +26,12 @@ const logger = winston.createLogger({
     ]
 });
 
-// Configuration de la base de données
-const sequelize = new Sequelize(
-    process.env.POSTGRES_DB || 'trafine-navigation',
-    process.env.POSTGRES_USER || 'postgres',
-    process.env.POSTGRES_PASSWORD || 'postgres',
-    {
-        host: process.env.POSTGRES_HOST || 'postgres',
-        port: process.env.POSTGRES_PORT || 5432,
-        dialect: 'postgres',
-        logging: (msg) => logger.debug(msg)
-    }
-);
-
 // Tester la connexion à la base de données
 sequelize
     .authenticate()
     .then(() => {
         logger.info('Connexion à PostgreSQL établie avec succès');
+        console.log('Connexion à PostgreSQL établie avec succès');
     })
     .catch((err) => {
         logger.error('Impossible de se connecter à PostgreSQL:', err);
@@ -89,8 +79,9 @@ app.use((err, req, res, next) => {
 });
 
 // Synchroniser les modèles avec la base de données et démarrer le serveur
-sequelize.sync({ alter: process.env.NODE_ENV === 'development' })
+sequelize.sync({ alter: process.env.NODE_ENV === 'development', force : true })
     .then(() => {
+        console.log(`BDD synchronisée avec succès`);
         app.listen(PORT, () => {
             logger.info(`Navigation service running on port ${PORT}`);
             console.log(`Navigation service running on port ${PORT}`);

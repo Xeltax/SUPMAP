@@ -115,6 +115,10 @@ Object.entries(serviceProxies).forEach(([service, config]) => {
     // Le services d'authentification a des routes publiques
     if (service === 'auth') {
         app.use(path, createProxyMiddleware({...config, onProxyReq: (proxyReq, req, res) => {
+                if (req.user && req.user.id) {
+                    proxyReq.setHeader('X-User-ID', req.user.id);
+                }
+
                 if (!req.body || !Object.keys(req.body).length) {
                     return;
                 }
@@ -133,6 +137,10 @@ Object.entries(serviceProxies).forEach(([service, config]) => {
     } else {
         // Les autres services nécessitent une authentification
         app.use(path, authCheck, createProxyMiddleware({...config, onProxyReq: (proxyReq, req, res) => {
+                if (req.user && req.user.id) {
+                    proxyReq.setHeader('X-User-ID', req.user.id);
+                }
+
                 if (!req.body || !Object.keys(req.body).length) {
                     return;
                 }

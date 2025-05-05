@@ -1,12 +1,13 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -45,15 +46,46 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
+// Composant pour gérer la redirection en fonction de l'état d'authentification
+function AuthenticationGuard({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      // Rediriger vers login si non authentifié et pas dans le groupe auth
+      router.replace('/auth/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      // Rediriger vers tabs si authentifié et dans le groupe auth
+      router.replace('/(tabs)/dashboard');
+    }
+  }, [isAuthenticated, segments, isLoading]);
+
+  // Afficher les enfants uniquement si le chargement est terminé
+  if (isLoading) return null;
+  
+  return <>{children}</>;
+}
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthenticationGuard>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+          </Stack>
+        </AuthenticationGuard>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

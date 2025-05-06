@@ -95,7 +95,7 @@ const Register = () => {
     };
 
     const handleSocialLogin = (provider: string) => {
-        window.location.href = `${process.env.API_URL}/api/auth/${provider}`;
+        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/${provider}`;
     };
 
     return (

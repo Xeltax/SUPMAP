@@ -256,5 +256,5 @@ exports.googleCallback = (req, res) => {
     const token = generateToken(req.user);
 
     // Rediriger vers le frontend avec le token
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:8080'}/oauth-callback?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}`);
 };

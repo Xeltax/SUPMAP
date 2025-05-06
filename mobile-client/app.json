@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "extra": {
-      "apiUrl": "${API_URL}"
+      "apiUrlWeb": "http://localhost:3000",
+      "apiUrlMobile": "http://192.168.46.92:3000" 
     },
     "splash": {
       "image": "./assets/images/splash-icon.png",

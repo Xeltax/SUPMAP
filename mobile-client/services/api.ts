@@ -10,11 +10,25 @@ export interface ApiResponse<T> {
   errors?: any[];
 }
 
-// Get API URL from environment variables
+// Get API URL based on platform using expo-constants
 const getApiUrl = () => {
-  // Use the API_URL from the environment variables
-  const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3000';
-  return apiUrl;
+  try {
+    // Récupérer les URLs depuis les constantes Expo
+    const config = Constants.expoConfig;
+    
+    if (Platform.OS === 'web') {
+      const webApiUrl = config?.extra?.apiUrlWeb;
+      console.log('Using Web API URL:', webApiUrl);
+      return webApiUrl;
+    } else {
+      const mobileApiUrl = config?.extra?.apiUrlMobile;
+      console.log('Using Mobile API URL:', mobileApiUrl);
+      return mobileApiUrl;
+    }
+  } catch (error) {
+    console.error('Error getting API URL from constants:', error);
+    return false;
+  }
 };
 
 // Base API configuration
@@ -44,6 +58,16 @@ const customFetch = async (url: string, options: RequestInit = {}) => {
 
     // Make the request
     const fullUrl = `${apiConfig.baseURL}${url}`;
+    console.log(`Attempting to connect to: ${fullUrl}`);
+    
+    // Debug information for network issues
+    if (Platform.OS === 'web') {
+      console.log('Running on web platform');
+    } else {
+      console.log(`Running on ${Platform.OS} platform`);
+      console.log(`API URL from config: ${apiConfig.baseURL}`);
+    }
+    
     const response = await fetch(fullUrl, requestOptions);
     
     // Handle 401 Unauthorized
@@ -66,7 +90,20 @@ const customFetch = async (url: string, options: RequestInit = {}) => {
     const data = await response.json();
     return { response, data };
   } catch (error) {
+    // Enhanced error logging
     console.error('API request error:', error);
+    
+    // Log more details about the error
+    if (error instanceof TypeError && error.message === 'Network request failed') {
+      console.error('Erreur de connexion: Impossible de se connecter au serveur.');
+      console.error(`URL tentée: ${apiConfig.baseURL}${url}`);
+      console.error('Vérifiez que:');
+      console.error('1. Le serveur API est en cours d\'exécution');
+      console.error('2. L\'adresse IP dans .env est correcte');
+      console.error('3. Le téléphone et l\'ordinateur sont sur le même réseau Wi-Fi');
+      console.error('4. Le pare-feu Windows n\'empêche pas les connexions entrantes');
+    }
+    
     throw error;
   }
 };

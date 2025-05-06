@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Image } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import Colors from '../../constants/Colors';
 import { FontAwesome } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import ProfileEditModal from '../../components/ProfileEditModal';
+import PasswordChangeModal from '../../components/PasswordChangeModal';
 
 export default function ProfileScreen() {
   const { user, isLoading, logout } = useAuth();
+  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -48,7 +51,7 @@ export default function ProfileScreen() {
         
         <TouchableOpacity 
           style={styles.menuItem}
-          onPress={() => router.push('/profile/edit')}
+          onPress={() => setEditProfileModalVisible(true)}
         >
           <FontAwesome name="user-circle" size={24} color={Colors.light.tint} style={styles.menuIcon} />
           <Text style={styles.menuText}>Modifier le profil</Text>
@@ -57,7 +60,7 @@ export default function ProfileScreen() {
         
         <TouchableOpacity 
           style={styles.menuItem}
-          onPress={() => router.push('/profile/change-password')}
+          onPress={() => setChangePasswordModalVisible(true)}
         >
           <FontAwesome name="lock" size={24} color={Colors.light.tint} style={styles.menuIcon} />
           <Text style={styles.menuText}>Changer le mot de passe</Text>
@@ -110,6 +113,17 @@ export default function ProfileScreen() {
         <FontAwesome name="sign-out" size={20} color="#fff" style={styles.logoutIcon} />
         <Text style={styles.logoutText}>Se déconnecter</Text>
       </TouchableOpacity>
+
+      {/* Modals */}
+      <ProfileEditModal 
+        visible={editProfileModalVisible} 
+        onClose={() => setEditProfileModalVisible(false)} 
+      />
+      
+      <PasswordChangeModal 
+        visible={changePasswordModalVisible} 
+        onClose={() => setChangePasswordModalVisible(false)} 
+      />
     </ScrollView>
   );
 }

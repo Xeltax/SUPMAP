@@ -5,8 +5,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const winston = require('winston');
 const sequelize = require('./config/database');
-const Route = require('./models/routeModel');
-const Incident = require('./models/incidentModel');
 
 // Routes
 const routesRoutes = require('./routes/routesRoutes');

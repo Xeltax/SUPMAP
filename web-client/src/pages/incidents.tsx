@@ -98,7 +98,7 @@ const getIncidentIcon = (type: string) => {
         case 'congestion':
             return FaCar;
         case 'hazard':
-            return FaExclamationTriangle;a
+            return FaExclamationTriangle;
         case 'police':
             return FaExclamationCircle;
         default:
@@ -297,11 +297,6 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
         router.push(`/map?lat=${incident.location.coordinates[1]}&lng=${incident.location.coordinates[0]}&incident=${incident.id}`);
     };
 
-    // Fonction pour modifier un incident
-    const editIncident = (id: string) => {
-        router.push(`/incidents/edit/${id}`);
-    };
-
     // Vérifie si un incident est expiré
     const isExpired = (expiresAt: string) => {
         return new Date(expiresAt) <= new Date();
@@ -321,7 +316,7 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
                                 </Box>
                                 <Button
                                     as={NextLink}
-                                    href="/incidents/report"
+                                    href="/map"
                                     colorScheme="orange"
                                     size="lg"
                                     leftIcon={<FaExclamationTriangle />}
@@ -497,26 +492,6 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
                                                                 variant="ghost"
                                                                 size="sm"
                                                             />
-
-                                                            {actuallyActive && (
-                                                                <IconButton
-                                                                    aria-label="Modifier"
-                                                                    icon={<FaEdit />}
-                                                                    onClick={() => editIncident(incident.id)}
-                                                                    colorScheme="green"
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                />
-                                                            )}
-
-                                                            <IconButton
-                                                                aria-label="Supprimer"
-                                                                icon={<FaTrash />}
-                                                                onClick={() => handleDeleteClick(incident.id)}
-                                                                colorScheme="red"
-                                                                variant="ghost"
-                                                                size="sm"
-                                                            />
                                                         </Flex>
                                                     </Flex>
                                                 </CardBody>
@@ -530,7 +505,7 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
                                     <Text mb={4} color="gray.500">Aucun incident trouvé avec les filtres actuels</Text>
                                     <Button
                                         as={NextLink}
-                                        href="/incidents/report"
+                                        href="/map"
                                         colorScheme="orange"
                                         leftIcon={<FaExclamationTriangle />}
                                     >
@@ -606,6 +581,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 ...config,
                 params: { userId }
             }
+        );
+
+        const routesResponse = await axios.get(
+            `${process.env.API_URL}/api/navigation/traffic/routes`,
+            config
         );
 
         return {

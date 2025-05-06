@@ -35,7 +35,7 @@ app.use(morgan('dev'));
 // Limiter de débit pour éviter les attaques par force brute
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limite chaque IP à 100 requêtes par fenêtre
+    max: 1000, // Limite chaque IP à 100 requêtes par fenêtre
     standardHeaders: true,
     legacyHeaders: false,
     message: {

@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import Cookies from 'js-cookie';
 import api from '@/services/api';
 
-// Types
 interface User {
     id: string;
     username: string;
@@ -22,12 +21,11 @@ interface AuthContextType {
     logout: () => Promise<void>;
     updateProfile: (data: { username?: string; email?: string }) => Promise<void>;
     updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+    handleOAuthLogin: (token: string) => Promise<void>;
 }
 
-// Création du contexte d'authentification
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Hook personnalisé pour utiliser le contexte d'authentification
 export const useAuth = (): AuthContextType => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -36,26 +34,21 @@ export const useAuth = (): AuthContextType => {
     return context;
 };
 
-// Props du fournisseur d'authentification
 interface AuthProviderProps {
     children: ReactNode;
 }
 
-// Durée de vie du cookie en jours
 const COOKIE_EXPIRY = 7;
 
-// Fournisseur d'authentification
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    // Vérifier l'authentification à l'initialisation
     useEffect(() => {
         const checkAuth = async () => {
             setIsLoading(true);
-            // Récupérer le token depuis les cookies
             const storedToken = Cookies.get('token');
             const storedUser = Cookies.get('user');
 
@@ -82,7 +75,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         checkAuth();
     }, []);
 
-    // Connexion
+    const handleOAuthLogin = async (token: string) => {
+        setIsLoading(true);
+        try {
+            // Décoder le token pour obtenir les informations utilisateur
+            const payload = JSON.parse(atob(token.split('.')[1]));
+
+            const user = {
+                id: payload.id,
+                email: payload.email,
+                username: payload.username,
+                role: payload.role,
+                profilePicture: payload.profilePicture || ''
+            };
+
+            // Stocker le token et l'utilisateur dans les cookies
+            Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+            Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
+
+            // Mettre à jour l'état
+            setToken(token);
+            setUser(user);
+
+            // Rediriger vers le dashboard
+            router.push('/dashboard');
+        } catch (error) {
+            console.error('Erreur lors de la connexion OAuth:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const login = async (email: string, password: string) => {
         setIsLoading(true);
         try {
@@ -107,7 +131,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    // Inscription
     const register = async (username: string, email: string, password: string) => {
         setIsLoading(true);
         try {
@@ -132,7 +155,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    // Déconnexion
     const logout = async () => {
         setIsLoading(true);
         try {
@@ -151,7 +173,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    // Mise à jour du profil
     const updateProfile = async (data: { username?: string; email?: string }) => {
         setIsLoading(true);
         try {
@@ -170,7 +191,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    // Mise à jour du mot de passe
     const updatePassword = async (currentPassword: string, newPassword: string) => {
         setIsLoading(true);
         try {
@@ -194,7 +214,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    // Valeur du contexte
     const value = {
         user,
         token,
@@ -204,7 +223,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         register,
         logout,
         updateProfile,
-        updatePassword
+        updatePassword,
+        handleOAuthLogin
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

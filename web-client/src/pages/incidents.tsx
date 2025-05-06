@@ -316,7 +316,7 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
                                 </Box>
                                 <Button
                                     as={NextLink}
-                                    href="/incidents/report"
+                                    href="/map"
                                     colorScheme="orange"
                                     size="lg"
                                     leftIcon={<FaExclamationTriangle />}
@@ -492,15 +492,6 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
                                                                 variant="ghost"
                                                                 size="sm"
                                                             />
-
-                                                            <IconButton
-                                                                aria-label="Supprimer"
-                                                                icon={<FaTrash />}
-                                                                onClick={() => handleDeleteClick(incident.id)}
-                                                                colorScheme="red"
-                                                                variant="ghost"
-                                                                size="sm"
-                                                            />
                                                         </Flex>
                                                     </Flex>
                                                 </CardBody>
@@ -514,7 +505,7 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
                                     <Text mb={4} color="gray.500">Aucun incident trouvé avec les filtres actuels</Text>
                                     <Button
                                         as={NextLink}
-                                        href="/incidents/report"
+                                        href="/map"
                                         colorScheme="orange"
                                         leftIcon={<FaExclamationTriangle />}
                                     >
@@ -590,6 +581,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 ...config,
                 params: { userId }
             }
+        );
+
+        const routesResponse = await axios.get(
+            `${process.env.API_URL}/api/navigation/traffic/routes`,
+            config
         );
 
         return {

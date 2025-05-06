@@ -98,7 +98,7 @@ const getIncidentIcon = (type: string) => {
         case 'congestion':
             return FaCar;
         case 'hazard':
-            return FaExclamationTriangle;a
+            return FaExclamationTriangle;
         case 'police':
             return FaExclamationCircle;
         default:
@@ -297,11 +297,6 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
         router.push(`/map?lat=${incident.location.coordinates[1]}&lng=${incident.location.coordinates[0]}&incident=${incident.id}`);
     };
 
-    // Fonction pour modifier un incident
-    const editIncident = (id: string) => {
-        router.push(`/incidents/edit/${id}`);
-    };
-
     // Vérifie si un incident est expiré
     const isExpired = (expiresAt: string) => {
         return new Date(expiresAt) <= new Date();
@@ -497,17 +492,6 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
                                                                 variant="ghost"
                                                                 size="sm"
                                                             />
-
-                                                            {actuallyActive && (
-                                                                <IconButton
-                                                                    aria-label="Modifier"
-                                                                    icon={<FaEdit />}
-                                                                    onClick={() => editIncident(incident.id)}
-                                                                    colorScheme="green"
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                />
-                                                            )}
 
                                                             <IconButton
                                                                 aria-label="Supprimer"

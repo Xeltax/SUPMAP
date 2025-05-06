@@ -7,19 +7,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - AUTH_SERVICE_URL=http://auth-service:4000
-      - NAVIGATION_SERVICE_URL=http://navigation-service:4001
-#      - INCIDENTS_SERVICE_URL=http://incidents-service:4002
-#      - NOTIFICATION_SERVICE_URL=http://notification-service:4003
-#      - ANALYTICS_SERVICE_URL=http://analytics-service:4004
+      NODE_ENV: ${GATEWAY_NODE_ENV:-development}
+      DOTENV_KEY: ${GATEWAY_DOTENV_KEY}
     depends_on:
       - auth-service
       - navigation-service
-#      - incidents-service
-#      - notification-service
-#      - analytics-service
     networks:
       - trafine-network
 
@@ -29,11 +21,8 @@ services:
     ports:
       - "4000:4000"
     environment:
-      - NODE_ENV=development
-      - PORT=4000
-      - MONGO_URI=mongodb://mongodb:27017/trafine-auth
-      - JWT_SECRET=your_jwt_secret_key_here
-      - JWT_EXPIRES_IN=1d
+      NODE_ENV: ${AUTH_NODE_ENV:-development}
+      DOTENV_KEY: ${AUTH_DOTENV_KEY}
     depends_on:
       - mongodb
     networks:
@@ -45,72 +34,12 @@ services:
     ports:
       - "4001:4001"
     environment:
-      - NODE_ENV=development
-      - PORT=4001
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=trafine-navigation
-      - TOMTOM_API_KEY=your_tomtom_api_key_here
+      NODE_ENV: ${NAV_NODE_ENV}
+      DOTENV_KEY: ${NAV_DOTENV_KEY}
     depends_on:
       - postgres
     networks:
       - trafine-network
-
-#  # Service de gestion des incidents
-#  incidents-service:
-#    build: ./incidents-services
-#    ports:
-#      - "4002:4002"
-#    environment:
-#      - NODE_ENV=development
-#      - PORT=4002
-#      - POSTGRES_HOST=postgres
-#      - POSTGRES_PORT=5432
-#      - POSTGRES_USER=postgres
-#      - POSTGRES_PASSWORD=postgres
-#      - POSTGRES_DB=trafine-incidents
-#      - REDIS_HOST=redis
-#      - REDIS_PORT=6379
-#    depends_on:
-#      - postgres
-#      - redis
-#    networks:
-#      - trafine-network
-#
-#  # Service de notifications
-#  notification-service:
-#    build: ./notification-services
-#    ports:
-#      - "4003:4003"
-#    environment:
-#      - NODE_ENV=development
-#      - PORT=4003
-#      - REDIS_HOST=redis
-#      - REDIS_PORT=6379
-#    depends_on:
-#      - redis
-#    networks:
-#      - trafine-network
-#
-#  # Service d'analyse
-#  analytics-service:
-#    build: ./analytics-services
-#    ports:
-#      - "4004:4004"
-#    environment:
-#      - NODE_ENV=development
-#      - PORT=4004
-#      - POSTGRES_HOST=postgres
-#      - POSTGRES_PORT=5432
-#      - POSTGRES_USER=postgres
-#      - POSTGRES_PASSWORD=postgres
-#      - POSTGRES_DB=trafine-analytics
-#    depends_on:
-#      - postgres
-#    networks:
-#      - trafine-network
 
   # Web Client (Next.js)
   web-client:
@@ -152,16 +81,6 @@ services:
     networks:
       - trafine-network
 
-  # Redis pour la gestion en temps réel
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - trafine-network
-
 networks:
   trafine-network:
     driver: bridge
@@ -169,4 +88,3 @@ networks:
 volumes:
   mongodb_data:
   postgres_data:
-  redis_data:

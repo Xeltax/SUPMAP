@@ -275,8 +275,6 @@ exports.getUserRoutes = async (req, res, next) => {
             offset: offset ? parseInt(offset) : undefined
         });
 
-        console.log()
-
         res.status(200).json({
             status: 'success',
             results: routes.count,

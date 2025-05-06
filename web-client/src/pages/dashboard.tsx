@@ -23,6 +23,7 @@ import { FaRoute, FaExclamationTriangle, FaCar, FaMapMarkedAlt } from 'react-ico
 import NextLink from 'next/link';
 import axios from 'axios';
 import { useRouter } from 'next/router';
+import api from "@/services/api";
 
 // Types
 interface DashboardProps {
@@ -100,20 +101,6 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                                         <NextLink href="/incidents" passHref>
                                             <Button size="sm" colorScheme="blue" variant="ghost">
                                                 Voir tous
-                                            </Button>
-                                        </NextLink>
-                                    </StatHelpText>
-                                </Stat>
-
-                                <Stat bg={statCardBg} p={4} borderRadius="md">
-                                    <StatLabel display="flex" alignItems="center">
-                                        <Icon as={FaCar} mr={2} /> Incidents actifs à proximité
-                                    </StatLabel>
-                                    <StatNumber>{stats.activeIncidents}</StatNumber>
-                                    <StatHelpText>
-                                        <NextLink href="/map" passHref>
-                                            <Button size="sm" colorScheme="blue" variant="ghost">
-                                                Voir sur la carte
                                             </Button>
                                         </NextLink>
                                     </StatHelpText>
@@ -265,6 +252,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             config
         );
 
+        const incidentsResponse = await axios.get(
+            `${process.env.API_URL}/api/navigation/traffic/reports`,
+            {...config, params : { userId : userResponse.data.data.user.id }}
+        );
         // Récupération des statistiques (incidents signalés, etc.)
         // Note: Cette partie nécessiterait les endpoints correspondants
         // Pour l'exemple, nous utilisons des données fictives
@@ -274,8 +265,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 userData: userResponse.data.data.user,
                 stats: {
                     savedRoutes: routesResponse.data.data.routes.length,
-                    reportedIncidents: 5,  // Données fictives
-                    activeIncidents: 12,   // Données fictives
+                    reportedIncidents: incidentsResponse.data.data.incidents.length,  // Données fictives
                 },
                 recentRoutes: routesResponse.data.data.routes || [],
             },

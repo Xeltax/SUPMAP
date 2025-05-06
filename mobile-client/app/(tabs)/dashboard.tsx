@@ -9,7 +9,7 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   
   const navigateToMap = () => {
-    router.push('/(tabs)/two');
+    router.push('/(tabs)/map');
   };
 
   return (

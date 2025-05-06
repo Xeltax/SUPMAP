@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, ScrollView
 import { useAuth } from '../../contexts/AuthContext';
 import Colors from '../../constants/Colors';
 import { FontAwesome } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function ProfileScreen() {
   const { user, isLoading, logout } = useAuth();
@@ -45,13 +46,19 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Paramètres du compte</Text>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/profile/edit')}
+        >
           <FontAwesome name="user-circle" size={24} color={Colors.light.tint} style={styles.menuIcon} />
           <Text style={styles.menuText}>Modifier le profil</Text>
           <FontAwesome name="chevron-right" size={16} color="#ccc" />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/profile/change-password')}
+        >
           <FontAwesome name="lock" size={24} color={Colors.light.tint} style={styles.menuIcon} />
           <Text style={styles.menuText}>Changer le mot de passe</Text>
           <FontAwesome name="chevron-right" size={16} color="#ccc" />

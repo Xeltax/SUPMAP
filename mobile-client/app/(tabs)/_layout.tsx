@@ -22,12 +22,11 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
+        // Masquer le header sur tous les écrans
+        headerShown: false,
       }}>
       <Tabs.Screen
-        name="two"
+        name="map"
         options={{
           title: 'Carte',
           tabBarIcon: ({ color }) => <TabBarIcon name="map" color={color} />,

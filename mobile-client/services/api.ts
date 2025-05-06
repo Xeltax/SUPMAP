@@ -204,6 +204,13 @@ const api = {
       });
       return data;
     },
+    
+    getUserReports: async (): Promise<ApiResponse<{ incidents: any[] }>> => {
+      const { data } = await customFetch('/api/navigation/traffic/reports', {
+        method: 'GET',
+      });
+      return data;
+    },
 
     reportTrafficIncident: async (incidentData: {
       incidentType: string;

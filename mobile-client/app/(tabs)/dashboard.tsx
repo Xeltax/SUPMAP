@@ -1,19 +1,103 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import Colors from '../../constants/Colors';
 import { FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
+import api from '../../services/api';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({
+    savedRoutes: 0,
+    reportedIncidents: 0,
+    activeIncidents: 0
+  });
+  // Define types for routes
+  interface Route {
+    id: string;
+    name: string;
+    distance: number;
+    duration: number;
+    originName: string;
+    destinationName: string;
+  }
+  
+  const [recentRoutes, setRecentRoutes] = useState<Route[]>([]);
+  
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async (isRefreshing = false) => {
+    try {
+      if (!isRefreshing) {
+        setLoading(true);
+      }
+      
+      // Récupérer les itinéraires récents
+      const routesResponse = await api.routes.getUserRoutes({ limit: 3, sort: 'lastUsed' });
+      
+      // Récupérer les rapports d'incidents de l'utilisateur
+      const incidentsResponse = await api.traffic.getUserReports();
+      
+      // Mettre à jour les statistiques
+      if (routesResponse.status === 'success' && incidentsResponse.status === 'success') {
+        const routes = routesResponse.data?.routes || [];
+        const incidents = incidentsResponse.data?.incidents || [];
+        
+        setStats({
+          savedRoutes: routes.length,
+          reportedIncidents: incidents.length,
+          activeIncidents: 0 // Cette donnée n'est pas disponible pour le moment
+        });
+        
+        setRecentRoutes(routes);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
   
   const navigateToMap = () => {
     router.push('/(tabs)/map');
   };
 
+  const navigateToRoutes = () => {
+    // This would navigate to routes screen when implemented
+    // For now, just go to map
+    router.push('/(tabs)/map');
+  };
+
+  const navigateToIncidents = () => {
+    // This would navigate to incidents screen when implemented
+    // For now, just go to map
+    router.push('/(tabs)/map');
+  };
+  
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchDashboardData(true);
+  }, []);
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[Colors.light.tint]}
+          tintColor={Colors.light.tint}
+        />
+      }
+    >
+      {/* Welcome Card */}
       <View style={styles.welcomeCard}>
         <View style={styles.welcomeTextContainer}>
           <Text style={styles.welcomeTitle}>Bienvenue, {user?.username || 'utilisateur'} 👋</Text>
@@ -25,59 +109,99 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Statistics Cards */}
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
+        <TouchableOpacity style={styles.statCard} onPress={navigateToRoutes}>
           <FontAwesome name="road" size={24} color={Colors.light.tint} />
-          <Text style={styles.statValue}>0</Text>
-          <Text style={styles.statLabel}>Trajets récents</Text>
+          <Text style={styles.statValue}>{loading ? '-' : stats.savedRoutes}</Text>
+          <Text style={styles.statLabel}>Itinéraires sauvegardés</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.statCard} onPress={navigateToIncidents}>
+          <FontAwesome name="exclamation-triangle" size={24} color={Colors.light.tint} />
+          <Text style={styles.statValue}>{loading ? '-' : stats.reportedIncidents}</Text>
+          <Text style={styles.statLabel}>Signalements créés</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Recent Routes Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Itinéraires récents</Text>
+          <TouchableOpacity onPress={navigateToRoutes}>
+            <Text style={styles.seeAllText}>Voir tous</Text>
+          </TouchableOpacity>
         </View>
         
-        <View style={styles.statCard}>
-          <FontAwesome name="star" size={24} color={Colors.light.tint} />
-          <Text style={styles.statValue}>0</Text>
-          <Text style={styles.statLabel}>Favoris</Text>
-        </View>
-        
-        <View style={styles.statCard}>
-          <FontAwesome name="warning" size={24} color={Colors.light.tint} />
-          <Text style={styles.statValue}>0</Text>
-          <Text style={styles.statLabel}>Incidents signalés</Text>
-        </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.light.tint} />
+          </View>
+        ) : recentRoutes.length > 0 ? (
+          <View>
+            {recentRoutes.map((route, index) => (
+              <TouchableOpacity 
+                key={route.id || index} 
+                style={styles.routeItem}
+                onPress={() => navigateToRoutes()}
+              >
+                <View style={styles.routeHeader}>
+                  <Text style={styles.routeName}>{route.name || 'Itinéraire sans nom'}</Text>
+                </View>
+                <View style={styles.routeDetails}>
+                  <View style={styles.routeMetrics}>
+                    <FontAwesome name="road" size={14} color="#666" style={styles.routeIcon} />
+                    <Text style={styles.routeMetricText}>
+                      {Math.round(route.distance/1000)} km
+                    </Text>
+                    <Text style={styles.routeMetricText}>
+                      {Math.floor(route.duration/60)} min
+                    </Text>
+                  </View>
+                  <View style={styles.routeLocations}>
+                    <Text style={styles.routeLocationText} numberOfLines={1}>
+                      De: {route.originName || 'Départ'}
+                    </Text>
+                    <Text style={styles.routeLocationText} numberOfLines={1}>
+                      À: {route.destinationName || 'Arrivée'}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <FontAwesome name="map-o" size={50} color="#ccc" />
+            <Text style={styles.emptyStateText}>Vous n'avez pas encore d'itinéraires sauvegardés</Text>
+            <TouchableOpacity style={styles.createRouteButton} onPress={navigateToMap}>
+              <FontAwesome name="map-marker" size={16} color="#fff" style={styles.buttonIcon} />
+              <Text style={styles.buttonText}>Créer un itinéraire</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
+      {/* Quick Actions Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Trajets récents</Text>
-          <FontAwesome name="chevron-right" size={16} color="#ccc" />
+          <Text style={styles.sectionTitle}>Actions rapides</Text>
         </View>
-        <View style={styles.emptyState}>
-          <FontAwesome name="map-o" size={50} color="#ccc" />
-          <Text style={styles.emptyStateText}>Aucun trajet récent</Text>
-          <Text style={styles.emptyStateSubtext}>Vos trajets récents apparaîtront ici</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Itinéraires favoris</Text>
-          <FontAwesome name="chevron-right" size={16} color="#ccc" />
-        </View>
-        <View style={styles.emptyState}>
-          <FontAwesome name="star-o" size={50} color="#ccc" />
-          <Text style={styles.emptyStateText}>Aucun favori</Text>
-          <Text style={styles.emptyStateSubtext}>Ajoutez des itinéraires à vos favoris pour les retrouver ici</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Incidents à proximité</Text>
-          <FontAwesome name="chevron-right" size={16} color="#ccc" />
-        </View>
-        <View style={styles.emptyState}>
-          <FontAwesome name="map-marker" size={50} color="#ccc" />
-          <Text style={styles.emptyStateText}>Aucun incident à proximité</Text>
-          <Text style={styles.emptyStateSubtext}>Les incidents à proximité apparaîtront ici</Text>
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity style={styles.quickActionButton} onPress={navigateToMap}>
+            <FontAwesome name="map" size={24} color="#fff" style={styles.quickActionIcon} />
+            <Text style={styles.quickActionText}>Explorer la carte</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.quickActionButton} onPress={navigateToMap}>
+            <FontAwesome name="road" size={24} color="#fff" style={styles.quickActionIcon} />
+            <Text style={styles.quickActionText}>Nouvel itinéraire</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.quickActionButton} onPress={navigateToIncidents}>
+            <FontAwesome name="exclamation-triangle" size={24} color="#fff" style={styles.quickActionIcon} />
+            <Text style={styles.quickActionText}>Signaler un incident</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -88,6 +212,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    paddingBottom: 20,
   },
   welcomeCard: {
     backgroundColor: '#fff',
@@ -133,12 +258,12 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
-    marginTop: -30,
-    paddingHorizontal: 10,
+    marginHorizontal: 10,
+    marginVertical: 10,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#e6f2ff', // Light blue background similar to web client
     borderRadius: 10,
     padding: 15,
     marginHorizontal: 5,
@@ -163,7 +288,7 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: '#fff',
-    marginTop: 20,
+    marginTop: 15,
     borderRadius: 10,
     marginHorizontal: 15,
     shadowColor: '#000',
@@ -184,20 +309,98 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
+  seeAllText: {
+    fontSize: 14,
+    color: Colors.light.tint,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  routeItem: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+  },
+  routeHeader: {
+    marginBottom: 8,
+  },
+  routeName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  routeDetails: {
+    marginTop: 5,
+  },
+  routeMetrics: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  routeIcon: {
+    marginRight: 5,
+  },
+  routeMetricText: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 10,
+  },
+  routeLocations: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  routeLocationText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+    flex: 1,
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 20,
   },
   emptyStateText: {
     fontSize: 16,
-    fontWeight: 'bold',
     color: '#666',
     marginTop: 10,
+    marginBottom: 15,
+    textAlign: 'center',
   },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
+  createRouteButton: {
+    backgroundColor: Colors.light.tint,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
     marginTop: 5,
+    paddingHorizontal: 20,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  quickActionButton: {
+    backgroundColor: Colors.light.tint,
+    width: '31%',
+    height: 100,
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionIcon: {
+    marginBottom: 8,
+  },
+  quickActionText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
     textAlign: 'center',
   },
 });

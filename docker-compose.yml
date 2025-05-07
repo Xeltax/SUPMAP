@@ -37,7 +37,8 @@ services:
       NODE_ENV: ${NAV_NODE_ENV}
       DOTENV_KEY: ${NAV_DOTENV_KEY}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - trafine-network
 
@@ -66,18 +67,23 @@ services:
     networks:
       - trafine-network
 
-  # PostgreSQL avec PostGIS pour les services de navigation et incidents
   postgres:
-    image: postgis/postgis:14-3.2
+    build:
+      context: .
+      dockerfile: postgres-custom.Dockerfile
     ports:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_MULTIPLE_DATABASES=trafine-navigation,trafine-incidents,trafine-analytics
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres && psql -U postgres -d trafine-navigation -c 'SELECT 1'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/init-multiple-postgresql-databases.sh
     networks:
       - trafine-network
 

@@ -6,18 +6,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import api from '../../services/api';
 import RoutesModal from '../../components/RoutesModal';
+import IncidentsModal from '../../components/IncidentsModal';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [routesModalVisible, setRoutesModalVisible] = useState(false);
+  const [incidentsModalVisible, setIncidentsModalVisible] = useState(false);
   const [stats, setStats] = useState({
     savedRoutes: 0,
     reportedIncidents: 0,
     activeIncidents: 0
   });
-  // Define types for routes
+
   interface Route {
     id: string;
     name: string;
@@ -39,25 +41,21 @@ export default function DashboardScreen() {
         setLoading(true);
       }
       
-      // Récupérer les itinéraires récents (limités à 3) pour l'affichage
       const recentRoutesResponse = await api.routes.getUserRoutes({ limit: 3, sort: 'lastUsed' });
       
-      // Récupérer tous les itinéraires pour le comptage total (sans limite)
       const allRoutesResponse = await api.routes.getUserRoutes();
       
-      // Récupérer les rapports d'incidents de l'utilisateur
       const incidentsResponse = await api.traffic.getUserReports();
       
-      // Mettre à jour les statistiques
       if (recentRoutesResponse.status === 'success' && incidentsResponse.status === 'success' && allRoutesResponse.status === 'success') {
         const recentRoutes = recentRoutesResponse.data?.routes || [];
         const allRoutes = allRoutesResponse.data?.routes || [];
         const incidents = incidentsResponse.data?.incidents || [];
         
         setStats({
-          savedRoutes: allRoutes.length, // Utiliser le nombre total d'itinéraires
+          savedRoutes: allRoutes.length,
           reportedIncidents: incidents.length,
-          activeIncidents: 0 // Cette donnée n'est pas disponible pour le moment
+          activeIncidents: 0
         });
         
         setRecentRoutes(recentRoutes);
@@ -75,14 +73,12 @@ export default function DashboardScreen() {
   };
 
   const navigateToRoutes = () => {
-    // Ouvrir la modal des itinéraires
     setRoutesModalVisible(true);
   };
 
   const navigateToIncidents = () => {
-    // This would navigate to incidents screen when implemented
-    // For now, just go to map
-    router.push('/(tabs)/map');
+    setIncidentsModalVisible(true);
+    setIncidentsModalVisible(true);
   };
   
   const onRefresh = useCallback(() => {
@@ -215,6 +211,12 @@ export default function DashboardScreen() {
         visible={routesModalVisible} 
         onClose={() => setRoutesModalVisible(false)} 
       />
+      
+      {/* Incidents Modal */}
+      <IncidentsModal 
+        visible={incidentsModalVisible} 
+        onClose={() => setIncidentsModalVisible(false)} 
+      />
     </ScrollView>
   );
 }
@@ -274,7 +276,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#e6f2ff', // Light blue background similar to web client
+    backgroundColor: '#e6f2ff',
     borderRadius: 10,
     padding: 15,
     marginHorizontal: 5,

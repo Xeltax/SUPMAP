@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, FlatList } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import api from '../services/api';
 import { router } from 'expo-router';
 
-// Définition du type Route
 interface Route {
   id: string;
   name: string;
@@ -54,10 +53,7 @@ export default function RoutesModal({ visible, onClose }: RoutesModalProps) {
   };
 
   const navigateToRoute = (routeId: string) => {
-    // Fermer la modal
     onClose();
-    // Naviguer vers la page de détail de l'itinéraire (à implémenter plus tard)
-    // Pour l'instant, rediriger vers la carte
     router.push('/(tabs)/map');
   };
 
@@ -101,8 +97,18 @@ export default function RoutesModal({ visible, onClose }: RoutesModalProps) {
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
+      <TouchableOpacity 
+        style={styles.centeredView} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          style={styles.modalView} 
+          activeOpacity={1}
+          onPress={(e) => {
+            e.stopPropagation();
+          }}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.title}>Mes itinéraires</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -139,8 +145,8 @@ export default function RoutesModal({ visible, onClose }: RoutesModalProps) {
               </TouchableOpacity>
             </View>
           )}
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }

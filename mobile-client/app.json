@@ -3,6 +3,7 @@
     "name": "mobile-client",
     "slug": "mobile-client",
     "version": "1.0.0",
+    "sdkVersion": "53.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -10,7 +11,7 @@
     "newArchEnabled": true,
     "extra": {
       "apiUrlWeb": "http://localhost:3000",
-      "apiUrlMobile": "http://192.168.46.92:3000" 
+      "apiUrlMobile": "http://192.168.2.250:3000" 
     },
     "splash": {
       "image": "./assets/images/splash-icon.png",

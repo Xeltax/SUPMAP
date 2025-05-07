@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import * as Network from 'expo-network';
 
 // Types
 export interface ApiResponse<T> {
@@ -11,7 +12,7 @@ export interface ApiResponse<T> {
 }
 
 // Get API URL based on platform using expo-constants
-const getApiUrl = () => {
+const getApiUrl = async () => {
   try {
     // Récupérer les URLs depuis les constantes Expo
     const config = Constants.expoConfig;
@@ -21,9 +22,26 @@ const getApiUrl = () => {
       console.log('Using Web API URL:', webApiUrl);
       return webApiUrl;
     } else {
-      const mobileApiUrl = config?.extra?.apiUrlMobile;
-      console.log('Using Mobile API URL:', mobileApiUrl);
-      return mobileApiUrl;
+      try {
+        const manifestUrl = Constants.manifest?.hostUri || Constants.expoConfig?.hostUri;
+        
+        if (manifestUrl) {
+          const hostIpMatch = manifestUrl.match(/([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/);
+          if (hostIpMatch && hostIpMatch[1]) {
+            const hostIp = hostIpMatch[1];
+            const apiPort = config?.extra?.apiPort || 3000;
+            const mobileApiUrl = `http://${hostIp}:${apiPort}`;
+            console.log('Using Mobile API URL (auto-detected host IP):', mobileApiUrl);
+            return mobileApiUrl;
+          }
+        }
+        
+        console.warn('Could not extract host IP from Expo manifest');
+        throw new Error('Failed to detect host IP address');
+      } catch (detectionError) {
+        console.error('Error detecting host IP:', detectionError);
+        throw new Error('Failed to detect host IP address');
+      }
     }
   } catch (error) {
     console.error('Error getting API URL from constants:', error);
@@ -32,8 +50,22 @@ const getApiUrl = () => {
 };
 
 // Base API configuration
+let baseURL: string | boolean | null = null;
+
+// Initialize baseURL
+const initializeBaseURL = async (): Promise<string | boolean | null> => {
+  if (!baseURL) {
+    baseURL = await getApiUrl();
+  }
+  return baseURL;
+};
+
+initializeBaseURL();
+
 const apiConfig = {
-  baseURL: getApiUrl(),
+  get baseURL() {
+    return baseURL;
+  },
   headers: {
     'Content-Type': 'application/json',
   },
@@ -56,6 +88,11 @@ const customFetch = async (url: string, options: RequestInit = {}) => {
       headers,
     };
 
+    // Ensure baseURL is initialized
+    if (!baseURL) {
+      await initializeBaseURL();
+    }
+    
     // Make the request
     const fullUrl = `${apiConfig.baseURL}${url}`;
     console.log(`Attempting to connect to: ${fullUrl}`);

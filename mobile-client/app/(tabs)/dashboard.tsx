@@ -5,11 +5,13 @@ import { FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import api from '../../services/api';
+import RoutesModal from '../../components/RoutesModal';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [routesModalVisible, setRoutesModalVisible] = useState(false);
   const [stats, setStats] = useState({
     savedRoutes: 0,
     reportedIncidents: 0,
@@ -37,24 +39,28 @@ export default function DashboardScreen() {
         setLoading(true);
       }
       
-      // Récupérer les itinéraires récents
-      const routesResponse = await api.routes.getUserRoutes({ limit: 3, sort: 'lastUsed' });
+      // Récupérer les itinéraires récents (limités à 3) pour l'affichage
+      const recentRoutesResponse = await api.routes.getUserRoutes({ limit: 3, sort: 'lastUsed' });
+      
+      // Récupérer tous les itinéraires pour le comptage total (sans limite)
+      const allRoutesResponse = await api.routes.getUserRoutes();
       
       // Récupérer les rapports d'incidents de l'utilisateur
       const incidentsResponse = await api.traffic.getUserReports();
       
       // Mettre à jour les statistiques
-      if (routesResponse.status === 'success' && incidentsResponse.status === 'success') {
-        const routes = routesResponse.data?.routes || [];
+      if (recentRoutesResponse.status === 'success' && incidentsResponse.status === 'success' && allRoutesResponse.status === 'success') {
+        const recentRoutes = recentRoutesResponse.data?.routes || [];
+        const allRoutes = allRoutesResponse.data?.routes || [];
         const incidents = incidentsResponse.data?.incidents || [];
         
         setStats({
-          savedRoutes: routes.length,
+          savedRoutes: allRoutes.length, // Utiliser le nombre total d'itinéraires
           reportedIncidents: incidents.length,
           activeIncidents: 0 // Cette donnée n'est pas disponible pour le moment
         });
         
-        setRecentRoutes(routes);
+        setRecentRoutes(recentRoutes);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -69,9 +75,8 @@ export default function DashboardScreen() {
   };
 
   const navigateToRoutes = () => {
-    // This would navigate to routes screen when implemented
-    // For now, just go to map
-    router.push('/(tabs)/map');
+    // Ouvrir la modal des itinéraires
+    setRoutesModalVisible(true);
   };
 
   const navigateToIncidents = () => {
@@ -204,6 +209,12 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      
+      {/* Routes Modal */}
+      <RoutesModal 
+        visible={routesModalVisible} 
+        onClose={() => setRoutesModalVisible(false)} 
+      />
     </ScrollView>
   );
 }

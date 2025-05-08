@@ -138,7 +138,7 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                                             borderRadius="md"
                                             _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
                                             cursor="pointer"
-                                            onClick={() => router.push(`/routes/${route.id}`)}
+                                            onClick={() => router.push(`/map?route=${route.id}`)}
                                         >
                                             <Heading size="sm" mb={2}>{route.name}</Heading>
                                             <Flex color="gray.500" fontSize="sm">

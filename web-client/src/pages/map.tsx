@@ -321,6 +321,98 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     }, [map]);
 
+    // Set l'itinéraire si id de la route en paramètre
+    useEffect(() => {
+        if (map && router.query.route) {
+            const routeId = router.query.route as string;
+            loadRoute(routeId);
+        }
+    }, [map, router.query.route]);
+
+    const loadRoute = async (routeId: string) => {
+        setIsLoading(true);
+        try {
+            console.log("pass here")
+            const response = await api.routes.getRouteById(routeId);
+            if (response && response.data) {
+                const route : any = response.data.route;
+
+                console.log(route)
+
+                const calculatedRoute = await api.routes.calculate({
+                    origin : route.originCoordinates.coordinates,
+                    destination : route.destinationCoordinates.coordinates,
+                    routeType: route.routeType,
+                    avoidTolls: route.avoidTolls,
+                    traffic: true
+                    })
+
+                const tracedRoute : any = calculatedRoute.data?.routes;
+                setCurrentRoute(tracedRoute[0]);
+
+                // Afficher l'itinéraire sur la carte
+                if (map && ttObject) {
+                    // Supprimer les itinéraires existants
+                    if (map.getLayer('route')) {
+                        map.removeLayer('route');
+                    }
+                    if (map.getSource('route')) {
+                        map.removeSource('route');
+                    }
+
+                    // Créer une ligne à partir des points de l'itinéraire
+                    const routePoints: any = [];
+                    for (const leg of tracedRoute) {
+                        console.log(leg.legs)
+                        for (const legs of leg.legs) {
+                            for (const point of legs.points) {
+                                routePoints.push([point.longitude, point.latitude]);
+                            }
+                        }
+                    }
+
+                    setStartLocation(routePoints[0]);
+                    setEndLocation(routePoints[routePoints.length - 1]);
+                    const startLocation = {
+                        id : `manual-${Date.now()}`,
+                        name : route.originName,
+                        address : route.originName,
+                        position : {
+                            lat: routePoints[0][1],
+                            lon: routePoints[0][0]
+                        }
+                    }
+
+                    const endLocation = {
+                        id : `manual-${Date.now()}`,
+                        name : route.originName,
+                        address : route.originName,
+                        position : {
+                            lat: routePoints[routePoints.length - 1][1],
+                            lon: routePoints[routePoints.length - 1][0]
+                        }
+                    }
+
+                    setStartMarkerOnMap(startLocation);
+                    setEndMarkerOnMap(endLocation);
+
+                    addRouteToMap(routePoints);
+                }
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement de l\'itinéraire:', error);
+            toast({
+                title: 'Erreur de chargement',
+                description: 'Impossible de charger cet itinéraire',
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     // Rechercher des lieux
     const searchLocations = async () => {
         if (!searchQuery) return;
@@ -378,7 +470,7 @@ const Map = ({ apiKey }: MapPageProps) => {
 
     // Fonction pour placer le marqueur de destination sur la carte
     const setEndMarkerOnMap = (location: Location) => {
-        if (!map || !ttObject || !startLocation) return;
+        if (!map || !ttObject) return;
 
         if (endMarker) {
             const existingMarkers = document.querySelectorAll('.end-marker');
@@ -400,12 +492,11 @@ const Map = ({ apiKey }: MapPageProps) => {
             .setLngLat([location.position.lon, location.position.lat])
             .addTo(map);
 
-        // Mettre à jour l'état
         setEndMarker(marker);
         setEndLocation(location);
 
-        // Au lieu d'utiliser setTimeout, passons directement les valeurs actuelles
-        // à une fonction qui calculera l'itinéraire
+        if (!startLocation) return; // On check après pour permettre une bonne mise a jour de l'état
+
         calculateRouteWithLocations(startLocation, location);
     };
 

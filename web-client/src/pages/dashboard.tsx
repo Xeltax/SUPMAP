@@ -197,7 +197,7 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                                 </Button>
                                 <Button
                                     as={NextLink}
-                                    href="/routes/new"
+                                    href="/map?routeMode=true"
                                     h="100px"
                                     colorScheme="green"
                                     leftIcon={<FaRoute size={20} />}
@@ -206,7 +206,7 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                                 </Button>
                                 <Button
                                     as={NextLink}
-                                    href="/incidents/report"
+                                    href="/map"
                                     h="100px"
                                     colorScheme="orange"
                                     leftIcon={<FaExclamationTriangle size={20} />}

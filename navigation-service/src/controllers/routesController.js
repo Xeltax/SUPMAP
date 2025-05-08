@@ -15,7 +15,12 @@ exports.calculateRoute = async (req, res, next) => {
             waypoints,
             routeType,
             avoidTolls,
-            traffic
+            traffic,
+            instructionsType,
+            sectionType,
+            instructionAnnouncementPoints,
+            instructionPhonetics,
+            instructionRoadShieldReferences
         } = req.body;
 
         if (!origin || !destination) {
@@ -66,22 +71,51 @@ exports.calculateRoute = async (req, res, next) => {
                 // Extraire les points de l'itinéraire
                 const points = leg.points || [];
 
-                // Extraire les instructions de guidage, si disponibles
-                let instructions = [];
-                if (leg.guidance && leg.guidance.instructions) {
-                    instructions = leg.guidance.instructions.map(instruction => ({
-                        routeOffsetInMeters: instruction.routeOffsetInMeters,
-                        text: instruction.message || instruction.instruction || '',
-                        maneuver: instruction.maneuver || '',
-                        street: instruction.street || ''
-                    }));
-                }
-
                 return {
                     points,
-                    instructions
+                    summary: {
+                        lengthInMeters: leg.summary?.lengthInMeters,
+                        travelTimeInSeconds: leg.summary?.travelTimeInSeconds,
+                        trafficDelayInSeconds: leg.summary?.trafficDelayInSeconds || 0
+                    }
                 };
             });
+
+            let guidance = null;
+            if (route.guidance) {
+                const instructions = route.guidance.instructions.map(instruction => ({
+                    routeOffsetInMeters: instruction.routeOffsetInMeters,
+                    text: instruction.message || instruction.instruction || '',
+                    phoneticText: instruction.phoneticInstruction || null,
+                    maneuver: instruction.maneuver || '',
+                    street: instruction.street || '',
+                    exitNumber: instruction.exitNumber || null,
+                    roundaboutExitNumber: instruction.roundaboutExitNumber || null,
+                    travelTimeInSeconds: instruction.travelTimeInSeconds || null,
+                    point: instruction.point || null,
+                    // Informations sur les voies si disponibles
+                    lanes: instruction.lanes || null,
+                    laneSeparators: instruction.laneSeparators || null,
+                    // Références aux panneaux routiers si disponibles
+                    roadShields: instruction.roadShields || null
+                }));
+
+                // Groupes d'instructions si disponibles
+                const instructionGroups = route.guidance.instructionGroups ?
+                    route.guidance.instructionGroups.map(group => ({
+                        firstInstructionIndex: group.firstInstructionIndex,
+                        lastInstructionIndex: group.lastInstructionIndex,
+                        groupMessage: group.groupMessage || '',
+                        groupPhoneticMessage: group.groupPhoneticMessage || null
+                    })) : [];
+
+                guidance = {
+                    instructions,
+                    instructionGroups
+                };
+            }
+
+            console.log("guidance", guidance)
 
             return {
                 distance: summary.lengthInMeters,
@@ -89,7 +123,8 @@ exports.calculateRoute = async (req, res, next) => {
                 trafficDelay: summary.trafficDelayInSeconds,
                 departureTime: summary.departureTime,
                 arrivalTime: summary.arrivalTime,
-                legs
+                legs,
+                guidance
             };
         });
 

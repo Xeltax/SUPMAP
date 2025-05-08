@@ -49,8 +49,11 @@ import { SearchIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { FaRoute, FaDirections, FaCar, FaExclamationTriangle, FaMapMarkerAlt, FaLayerGroup, FaSave } from 'react-icons/fa';
 import Head from 'next/head';
 import axios from 'axios';
+import GuidanceInstruction from "@/components/GuidanceInstruction";
 import api from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
+import {useRouter} from "next/router";
+import {FaArrowsSpin} from "react-icons/fa6";
 
 interface MapPageProps {
     apiKey: string;
@@ -84,6 +87,7 @@ interface RouteInfo {
     distance: number;
     duration: number;
     legs: any[];
+    guidance: any;
 }
 
 const Map = ({ apiKey }: MapPageProps) => {
@@ -134,7 +138,6 @@ const Map = ({ apiKey }: MapPageProps) => {
 
     // Hooks pour les drawers et modals
     const { isOpen: isRouteDrawerOpen, onOpen: onRouteDrawerOpen, onClose: onRouteDrawerClose } = useDisclosure();
-    const { isOpen: isLayerDrawerOpen, onOpen: onLayerDrawerOpen, onClose: onLayerDrawerClose } = useDisclosure();
     const { isOpen: isSaveModalOpen, onOpen: onSaveModalOpen, onClose: onSaveModalClose } = useDisclosure();
 
     // État pour sauvegarde d'itinéraire
@@ -145,6 +148,7 @@ const Map = ({ apiKey }: MapPageProps) => {
     const routeColor = 'blue';
     const startMarkerColor = '#28a745';
     const endMarkerColor = '#dc3545';
+    const router = useRouter();
 
     // Initialiser la carte TomTom
     useEffect(() => {
@@ -311,6 +315,12 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     }, [map]);
 
+    useEffect(() => {
+        if (map && router.query.routeMode) {
+            toggleRoutingMode()
+        }
+    }, [map]);
+
     // Rechercher des lieux
     const searchLocations = async () => {
         if (!searchQuery) return;
@@ -444,6 +454,7 @@ const Map = ({ apiKey }: MapPageProps) => {
 
             if (response && response.data && response.data.routes && response.data.routes.length > 0) {
                 const route = response.data.routes[0];
+                console.log("route actuel", route);
                 setCurrentRoute(route);
 
                 // Afficher l'itinéraire sur la carte
@@ -507,9 +518,6 @@ const Map = ({ apiKey }: MapPageProps) => {
 
     // Fonction pour ajouter l'itinéraire à la carte
     const addRouteToMap = (routePoints: any) => {
-        console.log("map", map);
-        console.log("ttObject", ttObject);
-        console.log("routePoints", routePoints);
         if (!map || !ttObject || !routePoints || routePoints.length === 0) return;
 
         map.addSource('route', {
@@ -566,8 +574,6 @@ const Map = ({ apiKey }: MapPageProps) => {
 
             // Charger les incidents signalés par les utilisateurs
             const userReportsResponse = await api.traffic.getUserReports({ bbox });
-
-            console.log(userReportsResponse)
 
             // Vérifier les réponses et combiner les incidents
             let tomtomIncidents: any[] = [];
@@ -753,18 +759,14 @@ const Map = ({ apiKey }: MapPageProps) => {
                     }
                 }
 
-                // Extraire la description des événements
                 if (incident.properties.events && incident.properties.events.length > 0) {
-                    // Utiliser la description du premier événement
                     description = incident.properties.events[0].description || type;
 
-                    // Si plusieurs événements, ajouter la description du deuxième
                     if (incident.properties.events.length > 1 && incident.properties.events[1].description) {
                         description += ` - ${incident.properties.events[1].description}`;
                     }
                 }
 
-                // Formater les horodatages
                 if (incident.properties.startTime) {
                     const startDate = new Date(incident.properties.startTime);
                     timeInfo = `Début: ${startDate.toLocaleString()}`;
@@ -906,13 +908,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         } else {
             // Activer le mode itinéraire
             setRoutingStep('start');
-            toast({
-                title: 'Mode itinéraire activé',
-                description: 'Cliquez sur la carte pour définir le point de départ',
-                status: 'info',
-                duration: 3000,
-                isClosable: true,
-            });
         }
 
         // Basculer le mode
@@ -930,6 +925,12 @@ const Map = ({ apiKey }: MapPageProps) => {
             endMarker.remove();
             setEndMarker(null);
         }
+        const existingMarkers = document.querySelectorAll('.end-marker');
+        existingMarkers.forEach(marker => {
+            if (marker.parentNode) {
+                marker.parentNode.removeChild(marker);
+            }
+        });
 
         // Réinitialiser les emplacements
         setStartLocation(null);
@@ -1155,14 +1156,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                         mb={2}
                         onClick={toggleRoutingMode}
                     />
-                    <IconButton
-                        aria-label="Afficher les calques"
-                        icon={<FaLayerGroup />}
-                        colorScheme="gray"
-                        size="lg"
-                        mb={2}
-                        onClick={onLayerDrawerOpen}
-                    />
                 </Flex>
 
                 {/* Bouton pour sauvegarder l'itinéraire */}
@@ -1242,18 +1235,30 @@ const Map = ({ apiKey }: MapPageProps) => {
                                                 </Checkbox>
                                             </GridItem>
                                         </Grid>
-                                        <Button
-                                            mt={4}
-                                            colorScheme="blue"
-                                            onClick={() => {
-                                                if (!startLocation || !endLocation) return;
-                                                calculateRouteWithLocations(startLocation, endLocation)
-                                            }}
-                                            isLoading={isLoading}
-                                            width="full"
-                                        >
-                                            Recalculer
-                                        </Button>
+                                        <Flex align="center" gap={2} mt={2}>
+                                            <Button
+                                                mt={4}
+                                                colorScheme="blue"
+                                                leftIcon={<FaArrowsSpin />}
+                                                onClick={() => {
+                                                    if (!startLocation || !endLocation) return;
+                                                    calculateRouteWithLocations(startLocation, endLocation)
+                                                }}
+                                                isLoading={isLoading}
+                                                width="full"
+                                            >
+                                                Recalculer
+                                            </Button>
+                                            <Button
+                                                mt={4}
+                                                colorScheme="green"
+                                                leftIcon={<FaSave />}
+                                                onClick={onSaveModalOpen}
+                                                width="full"
+                                            >
+                                                Sauvegarder
+                                            </Button>
+                                        </Flex>
                                     </Box>
 
                                     <Divider />
@@ -1261,41 +1266,42 @@ const Map = ({ apiKey }: MapPageProps) => {
                                     <Box>
                                         <Text fontWeight="bold" mb={2}>Instructions</Text>
                                         <Stack spacing={3}>
-                                            {currentRoute.legs.map((leg, legIndex) => (
-                                                leg.instructions && leg.instructions.map((instruction: any, i: any) => (
-                                                    <Flex
-                                                        key={`${legIndex}-${i}`}
-                                                        p={2}
-                                                        borderRadius="md"
-                                                        bg={bgColorSecondary}
-                                                        align="center"
+                                            {currentRoute.guidance.instructions.map((instruction, index) => (
+                                                <Flex
+                                                    key={`${index}`}
+                                                    p={2}
+                                                    borderRadius="md"
+                                                    bg={bgColorSecondary}
+                                                    align="center"
+                                                >
+                                                    <Box
+                                                        mr={3}
+                                                        bg={primaryColor}
+                                                        color="white"
+                                                        borderRadius="full"
+                                                        w="30px"
+                                                        h="30px"
+                                                        display="flex"
+                                                        alignItems="center"
+                                                        justifyContent="center"
                                                     >
-                                                        <Box
-                                                            mr={3}
-                                                            bg={primaryColor}
-                                                            color="white"
-                                                            borderRadius="full"
-                                                            w="30px"
-                                                            h="30px"
-                                                            display="flex"
-                                                            alignItems="center"
-                                                            justifyContent="center"
-                                                        >
-                                                            {i + 1}
-                                                        </Box>
-                                                        <Box flex="1">
-                                                            <Text>{instruction.text}</Text>
-                                                            {instruction.street && (
-                                                                <Text fontSize="sm" color="gray.500">
-                                                                    {instruction.street}
-                                                                </Text>
-                                                            )}
-                                                        </Box>
-                                                        <Text fontSize="sm" color="gray.500">
-                                                            {Math.round(instruction.routeOffsetInMeters/1000)} km
-                                                        </Text>
-                                                    </Flex>
-                                                ))
+                                                        {index + 1}
+                                                    </Box>
+                                                    <Box flex="1">
+                                                        <GuidanceInstruction
+                                                            key={instruction.id}
+                                                            instruction={instruction.text}
+                                                        />
+                                                        {instruction.street && (
+                                                            <Text fontSize="sm" color="gray.500">
+                                                                {instruction.street}
+                                                            </Text>
+                                                        )}
+                                                    </Box>
+                                                    <Text fontSize="sm" color="gray.500">
+                                                        {Math.round(instruction.routeOffsetInMeters/1000)} km
+                                                    </Text>
+                                                </Flex>
                                             ))}
                                         </Stack>
                                     </Box>
@@ -1380,55 +1386,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                         </ModalFooter>
                     </ModalContent>
                 </Modal>
-
-                {/* Panneau des calques */}
-                <Drawer
-                    isOpen={isLayerDrawerOpen}
-                    placement="left"
-                    onClose={onLayerDrawerClose}
-                    size="xs"
-                >
-                    <DrawerOverlay />
-                    <DrawerContent>
-                        <DrawerCloseButton />
-                        <DrawerHeader borderBottomWidth="1px">
-                            Calques
-                        </DrawerHeader>
-
-                        <DrawerBody>
-                            <Stack spacing={4}>
-                                <Box>
-                                    <Text fontWeight="bold" mb={2}>Type de carte</Text>
-                                    <Select
-                                        value={currentMapStyle}
-                                        onChange={(e) => map && map.setStyle(e.target.value)}
-                                    >
-                                        <option value="basic-main">Standard</option>
-                                        <option value="basic-night">Nuit</option>
-                                        <option value="hybrid-main">Satellite</option>
-                                    </Select>
-                                </Box>
-
-                                <Divider />
-
-                                <Box>
-                                    <Text fontWeight="bold" mb={2}>Afficher</Text>
-                                    <Stack spacing={2}>
-                                        <Checkbox defaultChecked onChange={() => loadIncidents()}>
-                                            Incidents de circulation
-                                        </Checkbox>
-                                        <Checkbox defaultChecked>
-                                            Trafic en temps réel
-                                        </Checkbox>
-                                        <Checkbox defaultChecked>
-                                            Transports en commun
-                                        </Checkbox>
-                                    </Stack>
-                                </Box>
-                            </Stack>
-                        </DrawerBody>
-                    </DrawerContent>
-                </Drawer>
 
                 {/* Modal pour sauvegarder l'itinéraire */}
                 <Modal isOpen={isSaveModalOpen} onClose={onSaveModalClose}>

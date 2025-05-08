@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { isAuthenticated } = useAuth();
 
     // Pages qui ne nécessitent pas de navbar/footer complets
-    const fullScreenPages = ['/map'];
+    const fullScreenPages = ['/map', '/admin', '/admin/users', '/admin/routes', '/admin/incidents', '/admin/settings'];
     const isFullScreen = fullScreenPages.includes(router.pathname);
 
     // Pages publiques (accessibles sans connexion)

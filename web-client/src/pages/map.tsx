@@ -1266,7 +1266,7 @@ const Map = ({ apiKey }: MapPageProps) => {
                                     <Box>
                                         <Text fontWeight="bold" mb={2}>Instructions</Text>
                                         <Stack spacing={3}>
-                                            {currentRoute.guidance.instructions.map((instruction, index) => (
+                                            {currentRoute.guidance.instructions.map((instruction : any, index : number) => (
                                                 <Flex
                                                     key={`${index}`}
                                                     p={2}

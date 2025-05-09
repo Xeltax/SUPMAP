@@ -186,7 +186,7 @@ const api = {
 
         getTrafficIncidents: async (bbox: string, incidentType?: string): Promise<ApiResponse<{ incidents: any }>> => {
             const params = { bbox, incidentType };
-            const response = await apiClient.get<ApiResponse<{ incidents: any }>>('/api/navigation/traffic/reports', { params });
+            const response = await apiClient.get<ApiResponse<{ incidents: any }>>('/api/navigation/traffic/incidents', { params });
             return response.data;
         },
 

@@ -60,17 +60,27 @@ rl.question('\nChoisissez le numéro de l\'adresse IP à utiliser (ou appuyez su
   rl.close();
   
   try {
-    // Pour Expo, on ne peut pas utiliser directement une adresse IP avec --host
-    // On doit utiliser --lan pour le réseau local
+    // Préparer la commande Expo à exécuter
+    let command;
+    let envVars = '';
+    
     if (selectedIP === 'localhost') {
-      execSync('expo start --host localhost', { stdio: 'inherit' });
+      command = 'expo start --host localhost';
     } else {
       // Définir la variable d'environnement REACT_NATIVE_PACKAGER_HOSTNAME
-      // pour forcer l'utilisation de l'adresse IP spécifique
-      const env = { ...process.env, REACT_NATIVE_PACKAGER_HOSTNAME: selectedIP };
+      envVars = `set REACT_NATIVE_PACKAGER_HOSTNAME=${selectedIP} && `;
+      command = 'expo start --lan';
       console.log(`Utilisation de l'adresse IP ${selectedIP} via REACT_NATIVE_PACKAGER_HOSTNAME`);
-      execSync('expo start --lan', { stdio: 'inherit', env });
     }
+    
+    // Ouvrir un nouvel invite de commande avec la commande Expo
+    const fullCommand = `start cmd.exe /K "cd ${process.cwd()} && ${envVars}${command}"`;
+    console.log('Ouverture d\'un nouvel invite de commande avec Expo...');
+    execSync(fullCommand);
+    
+    console.log('Un nouvel invite de commande a été ouvert pour exécuter Expo.');
+    console.log('Vous pouvez fermer cette fenêtre ou l\'utiliser pour d\'autres commandes.');
+    console.log('Pour arrêter Expo, fermez simplement la nouvelle fenêtre de commande.')
   } catch (error) {
     console.error('Erreur lors du démarrage d\'Expo:', error);
   }

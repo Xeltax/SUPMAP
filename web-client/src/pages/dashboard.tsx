@@ -138,7 +138,7 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                                             borderRadius="md"
                                             _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
                                             cursor="pointer"
-                                            onClick={() => router.push(`/routes/${route.id}`)}
+                                            onClick={() => router.push(`/map?route=${route.id}`)}
                                         >
                                             <Heading size="sm" mb={2}>{route.name}</Heading>
                                             <Flex color="gray.500" fontSize="sm">
@@ -197,7 +197,7 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                                 </Button>
                                 <Button
                                     as={NextLink}
-                                    href="/routes/new"
+                                    href="/map?routeMode=true"
                                     h="100px"
                                     colorScheme="green"
                                     leftIcon={<FaRoute size={20} />}
@@ -206,7 +206,7 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                                 </Button>
                                 <Button
                                     as={NextLink}
-                                    href="/incidents/report"
+                                    href="/map"
                                     h="100px"
                                     colorScheme="orange"
                                     leftIcon={<FaExclamationTriangle size={20} />}

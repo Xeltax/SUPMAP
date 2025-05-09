@@ -69,6 +69,7 @@ import NextLink from 'next/link';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import {FaRoadSpikes} from "react-icons/fa6";
+import api from "@/services/api";
 
 // Types
 interface RouteCoordinates {
@@ -235,10 +236,7 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
         if (!routeToDelete) return;
 
         try {
-            // Appel API pour supprimer l'itinéraire
-            await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/navigation/routes/${routeToDelete}`, {
-                withCredentials: true
-            });
+            await api.routes.deleteRoute(routeToDelete);
 
             // Mise à jour de l'état
             setRoutes(routes.filter(route => route.id !== routeToDelete));
@@ -269,11 +267,7 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
             const updatedIsFavorite = !route.isFavorite;
 
             // Appel API pour mettre à jour le statut favori
-            await axios.patch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/navigation/routes/${route.id}`,
-                { isFavorite: updatedIsFavorite },
-                { withCredentials: true }
-            );
+            await api.routes.updateRoute(route.id, { isFavorite: updatedIsFavorite });
 
             // Mise à jour de l'état local
             setRoutes(routes.map(r =>
@@ -299,23 +293,7 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
 
     // Fonction pour naviguer vers la carte avec l'itinéraire sélectionné
     const viewOnMap = (route: Route) => {
-        const origin = `${route.originCoordinates.coordinates[1]},${route.originCoordinates.coordinates[0]}`;
-        const destination = `${route.destinationCoordinates.coordinates[1]},${route.destinationCoordinates.coordinates[0]}`;
-
-        router.push(`/map?route=${route.id}&origin=${origin}&destination=${destination}`);
-    };
-
-    // Fonction pour modifier un itinéraire
-    const editRoute = (route: Route) => {
-        router.push(`/routes/edit/${route.id}`);
-    };
-
-    // Fonction pour inverser l'origine et la destination
-    const reverseRoute = (route: Route) => {
-        const origin = `${route.destinationCoordinates.coordinates[1]},${route.destinationCoordinates.coordinates[0]}`;
-        const destination = `${route.originCoordinates.coordinates[1]},${route.originCoordinates.coordinates[0]}`;
-
-        router.push(`/map?origin=${origin}&destination=${destination}&reverse=true`);
+        router.push(`/map?route=${route.id}`);
     };
 
     return (
@@ -524,38 +502,13 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
                                                         />
 
                                                         <IconButton
-                                                            aria-label="Inverser l'itinéraire"
-                                                            icon={<FaExchangeAlt />}
-                                                            onClick={() => reverseRoute(route)}
-                                                            colorScheme="purple"
+                                                            aria-label={"Supprimer"}
+                                                            icon={<FaTrash />}
+                                                            onClick={() => handleDeleteClick(route.id)}
+                                                            colorScheme="red"
                                                             variant="ghost"
                                                             size="sm"
                                                         />
-
-                                                        <Menu>
-                                                            <MenuButton
-                                                                as={IconButton}
-                                                                aria-label="Options"
-                                                                icon={<FaEllipsisV />}
-                                                                variant="ghost"
-                                                                size="sm"
-                                                            />
-                                                            <MenuList>
-                                                                <MenuItem
-                                                                    icon={<FaEdit />}
-                                                                    onClick={() => editRoute(route)}
-                                                                >
-                                                                    Modifier
-                                                                </MenuItem>
-                                                                <MenuItem
-                                                                    icon={<FaTrash />}
-                                                                    onClick={() => handleDeleteClick(route.id)}
-                                                                    color="red.500"
-                                                                >
-                                                                    Supprimer
-                                                                </MenuItem>
-                                                            </MenuList>
-                                                        </Menu>
                                                     </Stack>
                                                 </Flex>
                                             </CardBody>

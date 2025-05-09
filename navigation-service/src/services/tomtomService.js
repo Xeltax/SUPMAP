@@ -44,14 +44,19 @@ class TomTomService {
                 waypoints = [],
                 routeType = 'fastest',
                 avoidTolls = false,
-                traffic = true
+                traffic = true,
+                instructionsType = 'tagged',
+                language = 'fr-FR',
+                sectionType = 'lanes',
+                instructionAnnouncementPoints = 'all',
+                instructionPhonetics = true,
+                instructionRoadShieldReferences = 'all'
             } = options;
 
             if (!origin || !destination) {
                 throw new Error('Les points d\'origine et de destination sont requis');
             }
 
-            // Construire la chaîne des points de l'itinéraire
             let locations = `${origin[1]},${origin[0]}`;
 
             // Ajouter les points intermédiaires
@@ -70,9 +75,14 @@ class TomTomService {
                 routeType: routeType,
                 traffic: traffic,
                 travelMode: 'car',
-                instructionsType: 'tagged',
-                language: 'fr-FR'
+                instructionsType: instructionsType,
+                language: language,
+                sectionType: sectionType,
+                instructionAnnouncementPoints: instructionAnnouncementPoints,
+                instructionPhonetics: instructionPhonetics ? 'LHP' : undefined, // Left-Hand-Phonetics
+                instructionRoadShieldReferences: instructionRoadShieldReferences
             };
+
 
             // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
@@ -80,6 +90,8 @@ class TomTomService {
                 `/routing/${this.routingVersion}/calculateRoute/${locations}/json`,
                 { params }
             );
+
+            console.log(response.data.routes)
 
             return response.data;
         } catch (error) {

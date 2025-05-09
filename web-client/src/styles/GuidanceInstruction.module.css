@@ -1,0 +1,58 @@
+.guidanceInstruction {
+    line-height: 1.5;
+    margin: 8px 0;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.highlight {
+    font-weight: bold;
+    color: #0066cc;
+}
+
+.guidance-street {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.guidance-roadNumber {
+    font-weight: bold;
+    color: #0066cc;
+    background-color: #f0f0f0;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin: 0 2px;
+}
+
+.guidance-roundaboutExitNumber {
+    font-weight: bold;
+    color: #008800;
+}
+
+.guidance-direction {
+    font-style: italic;
+}
+
+.guidance-roadShield {
+    display: inline-block;
+    background-color: #e0e0e0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin: 0 2px;
+    border: 1px solid #ccc;
+}
+
+.guidance-exitNumber {
+    font-weight: bold;
+    color: #ffffe0;
+    background-color: #ff6600;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.guidance-signpost {
+    background-color: #ffffe0;
+    padding: 1px 4px;
+    border: 1px solid #e6e6a0;
+    border-radius: 3px;
+}

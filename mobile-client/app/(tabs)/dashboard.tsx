@@ -78,7 +78,14 @@ export default function DashboardScreen() {
 
   const navigateToIncidents = () => {
     setIncidentsModalVisible(true);
-    setIncidentsModalVisible(true);
+  };
+  
+  const reportIncident = () => {
+    // Rediriger vers la carte avec un paramètre pour ouvrir la modale de signalement
+    router.push({
+      pathname: '/(tabs)/map',
+      params: { showIncidentForm: 'true' }
+    });
   };
   
   const onRefresh = useCallback(() => {
@@ -199,7 +206,7 @@ export default function DashboardScreen() {
             <Text style={styles.quickActionText}>Nouvel itinéraire</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.quickActionButton} onPress={navigateToIncidents}>
+          <TouchableOpacity style={styles.quickActionButton} onPress={reportIncident}>
             <FontAwesome name="exclamation-triangle" size={24} color="#fff" style={styles.quickActionIcon} />
             <Text style={styles.quickActionText}>Signaler un incident</Text>
           </TouchableOpacity>

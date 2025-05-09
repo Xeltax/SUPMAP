@@ -11,6 +11,7 @@ import { Map } from '../../components/Map';
 import { Ionicons } from '@expo/vector-icons';
 import { IncidentForm } from '../../components/IncidentForm';
 import { ToastProvider } from '../../components/Toast';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function MapScreen() {
   const { 
@@ -26,6 +27,7 @@ export default function MapScreen() {
     originLocation, 
     destinationLocation 
   } = useNavigation();
+  const params = useLocalSearchParams();
   const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [minimizedNav, setMinimizedNav] = useState(false);
   const [mapKey, setMapKey] = useState(0); // Used to force map re-render when route changes
@@ -58,6 +60,13 @@ export default function MapScreen() {
       setMapKey(prev => prev + 1);
     }
   }, [currentRoute]);
+
+  // Vérifier s'il faut ouvrir la modale de signalement d'incident automatiquement
+  useEffect(() => {
+    if (params.showIncidentForm === 'true') {
+      setIncidentFormVisible(true);
+    }
+  }, [params.showIncidentForm]);
 
   // Convert route data for the Map component
   // Coordonnées de l'itinéraire principal
@@ -198,7 +207,7 @@ const styles = StyleSheet.create({
   },
   incidentButton: {
     position: 'absolute',
-    left: 25,
+    left: 20,
     top: 50,
     backgroundColor: '#FF5722',
     borderRadius: 30,

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, View, Platform, SafeAreaView, Dimensions, TouchableOpacity, Text, KeyboardAvoidingView } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, View, Platform, SafeAreaView, Dimensions, TouchableOpacity, Text, KeyboardAvoidingView, Animated } from 'react-native';
 import { RoutePlanner } from '../../components/RoutePlanner';
 import { NavigationInstructions } from '../../components/NavigationInstructions';
 import { RouteOptions } from '../../components/RouteOptions';
@@ -12,6 +12,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { IncidentForm } from '../../components/IncidentForm';
 import { ToastProvider } from '../../components/Toast';
 import { useLocalSearchParams } from 'expo-router';
+import { LocationObject } from 'expo-location';
+
+// Fonction pour formater la distance
+const formatDistance = (meters: number) => {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  } else {
+    const km = (meters / 1000).toFixed(1);
+    return `${km} km`;
+  }
+};
+
+// Fonction pour formater le temps
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} min`;
+  } else {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h${remainingMinutes}` : `${hours}h`;
+  }
+};
 
 export default function MapScreen() {
   const { 
@@ -24,16 +47,23 @@ export default function MapScreen() {
     confirmRoute,
     stopNavigation,
     currentStep,
+    nextStep,
     originLocation, 
     destinationLocation 
   } = useNavigation();
   const params = useLocalSearchParams();
   const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [userHeading, setUserHeading] = useState<number | null>(null);
+  const [userSpeed, setUserSpeed] = useState<number | null>(null);
   const [minimizedNav, setMinimizedNav] = useState(false);
   const [mapKey, setMapKey] = useState(0); // Used to force map re-render when route changes
   const [incidentFormVisible, setIncidentFormVisible] = useState(false);
+  const [navigationMode, setNavigationMode] = useState<'overview' | 'navigation'>('overview');
+  const locationSubscription = useRef<any>(null);
+  const mapZoomLevel = useRef<number>(15);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Request location permissions
+  // Request location permissions and start location tracking
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -43,23 +73,88 @@ export default function MapScreen() {
       }
 
       try {
-        const location = await Location.getCurrentPositionAsync({});
+        // Get initial location
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.BestForNavigation
+        });
+        
         setUserLocation({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude
         });
+        setUserHeading(location.coords.heading || 0);
+        setUserSpeed(location.coords.speed || 0);
+        
+        // Start watching position with high accuracy for navigation
+        if (locationSubscription.current) {
+          locationSubscription.current.remove();
+        }
+        
+        locationSubscription.current = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            distanceInterval: 5, // Update every 5 meters
+            timeInterval: 1000, // Or at least every second
+          },
+          (location: LocationObject) => {
+            setUserLocation({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude
+            });
+            setUserHeading(location.coords.heading || 0);
+            setUserSpeed(location.coords.speed || 0);
+            
+            // Adjust zoom level based on speed
+            if (location.coords.speed !== null) {
+              // Speed is in m/s, we adjust zoom level accordingly
+              // Lower speed = higher zoom level (more detail)
+              if (location.coords.speed < 5) { // Walking or very slow
+                mapZoomLevel.current = 19.5; // Zoom très élevé pour la marche
+              } else if (location.coords.speed < 14) { // Urban driving
+                mapZoomLevel.current = 18.5; // Zoom élevé pour la conduite urbaine
+              } else if (location.coords.speed < 25) { // Suburban
+                mapZoomLevel.current = 17.5; // Zoom moyen pour la conduite suburbaine
+              } else { // Highway
+                mapZoomLevel.current = 16.5; // Zoom plus faible pour l'autoroute
+              }
+            } else {
+              // Valeur par défaut si la vitesse n'est pas disponible
+              mapZoomLevel.current = 18.5;
+            }
+          }
+        );
       } catch (err) {
         console.error('Error getting location:', err);
       }
     })();
+    
+    // Cleanup subscription on unmount
+    return () => {
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+      }
+    };
   }, []);
 
   // Force map re-render when route changes
   useEffect(() => {
     if (currentRoute) {
       setMapKey(prev => prev + 1);
+      
+      // When a route is confirmed, show animation to navigation mode
+      if (isNavigating && !routeOptions) {
+        setNavigationMode('navigation');
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true
+        }).start();
+      } else {
+        setNavigationMode('overview');
+        fadeAnim.setValue(0);
+      }
     }
-  }, [currentRoute]);
+  }, [currentRoute, isNavigating, routeOptions]);
 
   // Vérifier s'il faut ouvrir la modale de signalement d'incident automatiquement
   useEffect(() => {
@@ -143,10 +238,89 @@ export default function MapScreen() {
             alternativeRoutes={routeOptions ? alternativeRoutes : []}
             showUserLocation={true}
             followUserLocation={isNavigating}
-            fitRouteToBounds={routeOptions}
+            fitRouteToBounds={routeOptions || (isNavigating && navigationMode === 'overview')}
             bottomPadding={routeOptions ? 180 : 0}
+            rotateWithHeading={isNavigating && navigationMode === 'navigation'}
+            heading={userHeading || 0}
+            zoomLevel={mapZoomLevel.current}
+            navigationMode={navigationMode}
+            nextManeuverCoordinates={nextStep && nextStep.point ? {
+              latitude: nextStep.point.latitude,
+              longitude: nextStep.point.longitude
+            } : undefined}
           />
         </View>
+        
+        {/* Barre supérieure avec boutons et infos - toujours visible quand on navigue */}
+        {isNavigating && (
+          <View style={styles.topBar}>
+            {/* Bouton pour basculer entre les modes de navigation */}
+            <TouchableOpacity 
+              style={styles.navigationModeButton}
+              onPress={() => {
+                const newMode = navigationMode === 'overview' ? 'navigation' : 'overview';
+                setNavigationMode(newMode);
+                
+                if (newMode === 'navigation') {
+                  Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true
+                  }).start();
+                } else {
+                  Animated.timing(fadeAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true
+                  }).start();
+                }
+              }}
+            >
+              <Ionicons 
+                name={navigationMode === 'overview' ? "navigate" : "map"} 
+                size={24} 
+                color="white" 
+              />
+            </TouchableOpacity>
+            
+            {/* Affichage de la vitesse en mode navigation */}
+            {navigationMode === 'navigation' && userSpeed !== null && (
+              <View style={styles.speedometer}>
+                <Text style={styles.speedValue}>
+                  {Math.round(userSpeed * 3.6)} {/* Conversion m/s en km/h */}
+                </Text>
+                <Text style={styles.speedUnit}>km/h</Text>
+              </View>
+            )}
+            
+            {/* Informations de navigation résumées (toujours visibles en mode navigation) */}
+            {navigationMode === 'navigation' && (
+              <View style={styles.navigationSummaryBar}>
+                <View style={styles.navigationSummaryItem}>
+                  <Ionicons name="time-outline" size={16} color="white" />
+                  <Text style={styles.navigationSummaryText}>
+                    {formatTime(currentRoute?.duration ? Math.max(0, currentRoute.duration - (currentStep?.travelTimeInSeconds || 0)) : 0)}
+                  </Text>
+                </View>
+                <View style={styles.navigationSummaryItem}>
+                  <Ionicons name="navigate-outline" size={16} color="white" />
+                  <Text style={styles.navigationSummaryText}>
+                    {formatDistance(currentRoute?.distance ? currentRoute.distance - (currentStep?.routeOffsetInMeters || 0) : 0)}
+                  </Text>
+                </View>
+                <View style={styles.navigationSummaryItem}>
+                  <Ionicons name="flag-outline" size={16} color="white" />
+                  <Text style={styles.navigationSummaryText}>
+                    {currentRoute?.arrivalTime ? new Date(currentRoute.arrivalTime).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : '--:--'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
         
         {/* Navigation UI Overlay */}
         <View style={styles.overlayContainer}>
@@ -175,16 +349,16 @@ export default function MapScreen() {
           {isNavigating && !routeOptions && (
             <View style={[
               styles.instructionsContainer, 
-              minimizedNav && styles.minimizedInstructions
+              minimizedNav && styles.minimizedInstructions,
+              navigationMode === 'navigation' && styles.navigationModeInstructions
             ]}>
               <NavigationInstructions 
                 minimized={minimizedNav}
                 onToggleMinimize={() => setMinimizedNav(!minimizedNav)}
+                navigationMode={navigationMode}
               />
             </View>
           )}
-          
-
         </View>
         
         {/* Formulaire de signalement d'incident */}
@@ -206,35 +380,11 @@ const { height, width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  incidentButton: {
-    position: 'absolute',
-    left: 20,
-    top: 20,
-    backgroundColor: '#FF5722',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 9999,
-  },
-  incidentButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    marginLeft: 8,
+    backgroundColor: '#f5f5f5',
   },
   mapContainer: {
     flex: 1,
-    width: '100%',
-  },
-  map: {
+    overflow: 'hidden',
     width: '100%',
     height: '100%',
   },
@@ -271,5 +421,92 @@ const styles = StyleSheet.create({
   },
   minimizedInstructions: {
     maxHeight: 60,
+  },
+  navigationModeInstructions: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  incidentButton: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    backgroundColor: '#ff5722',
+    borderRadius: 30,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  incidentButtonText: {
+    color: 'white',
+    marginLeft: 5,
+    fontWeight: 'bold',
+  },
+  topBar: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 30,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    zIndex: 999, // Valeur très élevée pour être au-dessus de tout
+  },
+  navigationModeButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 30,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    marginRight: 10,
+  },
+  speedometer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  navigationSummaryBar: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginHorizontal: 10,
+  },
+  navigationSummaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  navigationSummaryText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 5,
+  },
+  speedValue: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  speedUnit: {
+    color: 'white',
+    fontSize: 14,
   },
 });

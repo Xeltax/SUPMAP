@@ -9,6 +9,7 @@ interface NavigationInstructionsProps {
   onClose?: () => void;
   minimized?: boolean;
   onToggleMinimize?: () => void;
+  navigationMode?: 'overview' | 'navigation';
 }
 
 // Function to get appropriate icon based on maneuver type
@@ -47,6 +48,7 @@ export const NavigationInstructions: React.FC<NavigationInstructionsProps> = ({
   onClose,
   minimized = false,
   onToggleMinimize,
+  navigationMode = 'overview',
 }) => {
   const {
     isNavigating,
@@ -94,7 +96,11 @@ export const NavigationInstructions: React.FC<NavigationInstructionsProps> = ({
   if (minimized) {
     return (
       <TouchableOpacity
-        style={styles.minimizedContainer}
+        style={[
+          styles.minimizedContainer, 
+          navigationMode === 'navigation' && styles.navigationModeMinimized,
+          navigationMode !== 'navigation' && styles.standardModeMinimized
+        ]}
         onPress={onToggleMinimize}
       >
         <View style={styles.minimizedContent}>
@@ -119,41 +125,53 @@ export const NavigationInstructions: React.FC<NavigationInstructionsProps> = ({
     );
   }
 
+  // Déterminer le style en fonction du mode de navigation
+  const containerStyle = [
+    styles.container,
+    navigationMode === 'navigation' && styles.navigationModeContainer
+  ];
+  
+  // Déterminer les couleurs en fonction du mode
+  const textColor = navigationMode === 'navigation' ? '#fff' : '#333';
+  const iconColor = navigationMode === 'navigation' ? '#fff' : '#2196F3';
+  const secondaryTextColor = navigationMode === 'navigation' ? '#ddd' : '#777';
+
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       {/* Header with progress and close button */}
-      <View style={styles.header}>
+      <View style={[styles.header, navigationMode === 'navigation' && styles.navigationModeHeader]}>
         <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+          <View style={[styles.progressBar, { width: `${progress * 100}%` }, navigationMode === 'navigation' && styles.navigationModeProgressBar]} />
         </View>
-        <Text style={styles.stepCounter}>
+        <Text style={[styles.stepCounter, { color: textColor }]}>
           Étape {stepIndex + 1}/{totalSteps}
         </Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={onToggleMinimize} style={styles.iconButton}>
-            <Ionicons name="remove" size={24} color="#333" />
+            <Ionicons name="remove" size={24} color={textColor} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onClose || stopNavigation} style={styles.iconButton}>
-            <Ionicons name="close" size={24} color="#333" />
+            <Ionicons name="close" size={24} color={textColor} />
           </TouchableOpacity>
         </View>
       </View>
       
       {/* Current instruction */}
-      <View style={styles.currentStep}>
-        <View style={styles.iconContainer}>
-          <Ionicons name={getInstructionIcon(currentStep)} size={40} color="#2196F3" />
+      <View style={[styles.currentStep, navigationMode === 'navigation' && styles.navigationModeCurrentStep]}>
+        <View style={[styles.iconContainer, navigationMode === 'navigation' && styles.navigationModeIconContainer]}>
+          <Ionicons name={getInstructionIcon(currentStep)} size={navigationMode === 'navigation' ? 50 : 40} color={iconColor} />
         </View>
         <View style={styles.instructionTextContainer}>
           <ParsedInstruction 
             instruction={currentStep.text || ""} 
-            textStyle={styles.instructionText} 
+            textStyle={[styles.instructionText, { color: textColor, fontSize: navigationMode === 'navigation' ? 22 : 18 }]} 
+            forceWhite={navigationMode === 'navigation'}
           />
           {currentStep.street && (
-            <Text style={styles.streetName}>{currentStep.street}</Text>
+            <Text style={[styles.streetName, { color: textColor }]}>{currentStep.street}</Text>
           )}
           {distanceToNext && (
-            <Text style={styles.distanceText}>
+            <Text style={[styles.distanceText, { color: textColor, fontSize: navigationMode === 'navigation' ? 20 : 16 }]} >
               Dans {formatDistance(distanceToNext)}
             </Text>
           )}
@@ -162,47 +180,48 @@ export const NavigationInstructions: React.FC<NavigationInstructionsProps> = ({
       
       {/* Next instruction preview */}
       {nextStep && (
-        <View style={styles.nextStep}>
-          <Text style={styles.nextStepLabel}>Ensuite</Text>
+        <View style={[styles.nextStep, navigationMode === 'navigation' && styles.navigationModeNextStep]}>
+          <Text style={[styles.nextStepLabel, { color: textColor }]}>Ensuite</Text>
           <View style={styles.nextStepContent}>
             <Ionicons 
               name={getInstructionIcon(nextStep)} 
               size={24} 
-              color="#777" 
+              color={secondaryTextColor} 
               style={styles.nextStepIcon} 
             />
             <ParsedInstruction 
               instruction={nextStep.text || ""} 
-              textStyle={styles.nextStepText} 
+              textStyle={[styles.nextStepText, { color: secondaryTextColor }]} 
+              forceWhite={navigationMode === 'navigation'}
             />
           </View>
         </View>
       )}
       
       {/* Navigation summary */}
-      <View style={styles.summary}>
+      <View style={[styles.summary, navigationMode === 'navigation' && styles.navigationModeSummary]}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{formatDistance(remainingDistance)}</Text>
-          <Text style={styles.summaryLabel}>Restants</Text>
+          <Text style={[styles.summaryValue, { color: textColor }]}>{formatDistance(remainingDistance)}</Text>
+          <Text style={[styles.summaryLabel, { color: secondaryTextColor }]}>Restants</Text>
         </View>
         
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, navigationMode === 'navigation' && { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
         
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{formatTime(remainingTime)}</Text>
-          <Text style={styles.summaryLabel}>Temps estimé</Text>
+          <Text style={[styles.summaryValue, { color: textColor }]}>{formatTime(remainingTime)}</Text>
+          <Text style={[styles.summaryLabel, { color: secondaryTextColor }]}>Temps estimé</Text>
         </View>
         
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, navigationMode === 'navigation' && { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
         
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>
+          <Text style={[styles.summaryValue, { color: textColor }]} >
             {new Date(currentRoute?.arrivalTime || '').toLocaleTimeString([], {
               hour: '2-digit',
-              minute: '2-digit'
+              minute: '2-digit',
             })}
           </Text>
-          <Text style={styles.summaryLabel}>Arrivée</Text>
+          <Text style={[styles.summaryLabel, { color: secondaryTextColor }]}>Arrivée</Text>
         </View>
       </View>
       
@@ -253,21 +272,28 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    overflow: 'hidden',
+    paddingBottom: 20,
+  },
+  navigationModeContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
   },
   header: {
+    paddingTop: 15,
+    paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    marginBottom: 15,
+  },
+  navigationModeHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingBottom: 10,
   },
   progressContainer: {
     position: 'absolute',
@@ -280,6 +306,11 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 4,
     backgroundColor: '#2196F3',
+    borderRadius: 2,
+  },
+  navigationModeProgressBar: {
+    backgroundColor: '#4CAF50',
+    height: 5,
   },
   stepCounter: {
     fontSize: 14,
@@ -296,19 +327,31 @@ const styles = StyleSheet.create({
   },
   currentStep: {
     flexDirection: 'row',
+    paddingHorizontal: 15,
+    marginBottom: 20,
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+  },
+  navigationModeCurrentStep: {
+    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+    paddingVertical: 15,
+    borderRadius: 10,
+    marginHorizontal: 10,
   },
   iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  navigationModeIconContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#f5f9ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginRight: 20,
   },
   instructionTextContainer: {
     flex: 1,
@@ -333,6 +376,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
+  navigationModeNextStep: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 15,
+    borderRadius: 10,
+    marginHorizontal: 10,
+  },
   nextStepLabel: {
     fontSize: 13,
     color: '#999',
@@ -353,10 +402,17 @@ const styles = StyleSheet.create({
   },
   summary: {
     flexDirection: 'row',
+    paddingHorizontal: 15,
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  navigationModeSummary: {
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 20,
+    paddingBottom: 10,
   },
   summaryItem: {
     alignItems: 'center',
@@ -409,20 +465,50 @@ const styles = StyleSheet.create({
   stopText: {
     color: '#fff',
   },
+  minimizedWrapper: {
+    width: '100%',
+  },
   minimizedContainer: {
+    width: '100%',
+    height: 60,
     backgroundColor: '#2196F3',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    paddingHorizontal: 15,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  navigationModeMinimized: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  standardModeMinimized: {
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+  },
+  minimizedInfoBar: {
+    width: '100%',
+    height: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+  },
+  minimizedInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  minimizedInfoText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 5,
   },
   minimizedContent: {
     flexDirection: 'row',

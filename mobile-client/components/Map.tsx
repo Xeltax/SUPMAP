@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 
 interface MapProps {
   origin?: { latitude: number; longitude: number } | null;
@@ -15,6 +16,11 @@ interface MapProps {
   fitRouteToBounds?: boolean;
   bottomPadding?: number;
   children?: React.ReactNode;
+  rotateWithHeading?: boolean;
+  heading?: number;
+  zoomLevel?: number;
+  navigationMode?: 'overview' | 'navigation';
+  nextManeuverCoordinates?: { latitude: number; longitude: number };
 }
 
 const { width, height } = Dimensions.get('window');
@@ -34,6 +40,11 @@ export const Map: React.FC<MapProps> = ({
   fitRouteToBounds = false,
   bottomPadding = 0,
   children,
+  rotateWithHeading = false,
+  heading = 0,
+  zoomLevel = 15,
+  navigationMode = 'overview',
+  nextManeuverCoordinates,
 }) => {
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<{
@@ -178,7 +189,17 @@ export const Map: React.FC<MapProps> = ({
         zoomEnabled={true}
         zoomControlEnabled={false} 
         loadingEnabled={true}
-        moveOnMarkerPress={true} 
+        moveOnMarkerPress={true}
+        camera={rotateWithHeading ? {
+          center: userLocation || {
+            latitude: origin?.latitude || 48.866667,
+            longitude: origin?.longitude || 2.333333,
+          },
+          pitch: 75, // Angle d'inclinaison plus élevé pour une vue 3D plus immersive
+          heading: heading, // Orientation de la carte selon la direction
+          altitude: 300, // Hauteur de la caméra réduite pour un zoom plus proche
+          zoom: zoomLevel, // Niveau de zoom dynamique
+        } : undefined}
       >
         {/* OpenStreetMap tiles */}
         <UrlTile 
@@ -199,6 +220,7 @@ export const Map: React.FC<MapProps> = ({
           <Marker
             coordinate={destination}
             title="Destination"
+            opacity={navigationMode === 'navigation' ? 0.7 : 1}
             pinColor="red"
           />
         )}
@@ -231,10 +253,22 @@ export const Map: React.FC<MapProps> = ({
         {routeCoordinates.length > 0 && (
           <Polyline
             coordinates={routeCoordinates}
-            strokeWidth={5}
+            strokeWidth={navigationMode === 'navigation' ? 8 : 5}
             strokeColor="#2196F3"
-            zIndex={2}
+            lineDashPattern={navigationMode === 'navigation' ? undefined : undefined}
           />
+        )}
+        
+        {/* Next maneuver marker for navigation mode */}
+        {navigationMode === 'navigation' && nextManeuverCoordinates && (
+          <Marker
+            coordinate={nextManeuverCoordinates}
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={styles.nextManeuverMarker}>
+              <Ionicons name="arrow-forward-circle" size={30} color="#FF5722" />
+            </View>
+          </Marker>
         )}
       </MapView>
       {children}
@@ -249,10 +283,22 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-    height: '115%',
-    width: '115%',
-    marginLeft: -5,
-    marginRight: -5,
-    marginBottom: -30,
+  },
+  alternativeRoute: {
+    opacity: 0.6,
+  },
+  selectedRoute: {
+    opacity: 1,
+    zIndex: 2,
+  },
+  nextManeuverMarker: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 2,
+    borderColor: '#FF5722',
   },
 });

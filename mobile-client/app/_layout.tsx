@@ -5,6 +5,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
+import { View, Platform } from 'react-native';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
@@ -80,13 +82,22 @@ function RootLayoutNav() {
     <AuthProvider>
       <NavigationProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <AuthenticationGuard>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="auth" options={{ headerShown: false }} />
-            </Stack>
-          </AuthenticationGuard>
+          <View style={{ flex: 1 }}>
+            {/* Configuration globale de la StatusBar pour éviter que l'app ne se retrouve dans la barre de statut */}
+            <StatusBar 
+              style="dark"
+              translucent={false}
+              backgroundColor="#ffffff"
+              hideTransitionAnimation="fade"
+            />
+            <AuthenticationGuard>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+              </Stack>
+            </AuthenticationGuard>
+          </View>
         </ThemeProvider>
       </NavigationProvider>
     </AuthProvider>

@@ -99,9 +99,18 @@ export const NavigationInstructions: React.FC<NavigationInstructionsProps> = ({
       >
         <View style={styles.minimizedContent}>
           <Ionicons name={getInstructionIcon(currentStep)} size={24} color="#fff" />
-          <Text style={styles.minimizedText} numberOfLines={1}>
-            {currentStep.text || "En cours de navigation..."}
-          </Text>
+          <View style={styles.minimizedTextContainer}>
+            <ParsedInstruction 
+              instruction={currentStep.text || "En cours de navigation..."} 
+              textStyle={styles.minimizedText} 
+              forceWhite={true}
+            />
+          </View>
+          {distanceToNext && (
+            <Text style={styles.minimizedDistance}>
+              Dans {formatDistance(distanceToNext)}
+            </Text>
+          )}
         </View>
         <TouchableOpacity onPress={stopNavigation} style={styles.closeButton}>
           <Ionicons name="close" size={20} color="#fff" />
@@ -420,12 +429,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  minimizedTextContainer: {
+    flex: 1,
+    marginLeft: 10,
+    overflow: 'hidden',
+  },
   minimizedText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
-    marginLeft: 10,
-    flex: 1,
+  },
+  minimizedDistance: {
+    color: '#fff',
+    fontSize: 13,
+    opacity: 0.9,
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 10,
   },
   closeButton: {
     padding: 4,

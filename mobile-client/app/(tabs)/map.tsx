@@ -6,7 +6,7 @@ import { RouteOptions } from '../../components/RouteOptions';
 import { useNavigation as useExpoNavigation } from 'expo-router';
 import { useNavigation } from '../../contexts/NavigationContext';
 import * as Location from 'expo-location';
-import { StatusBar } from 'expo-status-bar';
+// StatusBar est maintenant gérée globalement dans _layout.tsx
 import { Map } from '../../components/Map';
 import { Ionicons } from '@expo/vector-icons';
 import { IncidentForm } from '../../components/IncidentForm';
@@ -121,7 +121,6 @@ export default function MapScreen() {
   return (
     <ToastProvider>
       <SafeAreaView style={styles.container}>
-        <StatusBar style={Platform.OS === 'ios' ? 'light' : 'auto'} />
         
         {/* Bouton pour signaler un incident */}
         {!isNavigating && !routeOptions && (
@@ -212,9 +211,9 @@ const styles = StyleSheet.create({
   incidentButton: {
     position: 'absolute',
     left: 20,
-    top: 50,
+    top: 20,
     backgroundColor: '#FF5722',
-    borderRadius: 30,
+    borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 16,
     flexDirection: 'row',

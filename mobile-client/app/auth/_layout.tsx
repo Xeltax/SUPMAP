@@ -1,12 +1,11 @@
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+// StatusBar est maintenant gérée globalement dans _layout.tsx
 import { View } from 'react-native';
 import Colors from '../../constants/Colors';
 
 export default function AuthLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.light.background }}>
-      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerStyle: {

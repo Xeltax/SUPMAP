@@ -4,13 +4,14 @@ import { Text, StyleSheet, View } from 'react-native';
 interface ParsedInstructionProps {
   instruction: string;
   textStyle?: object;
+  forceWhite?: boolean;
 }
 
 /**
  * Composant qui parse les instructions de navigation balisées (tagged instructions)
  * Compatible avec le format utilisé par TomTom et le web-client
  */
-export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instruction, textStyle = {} }) => {
+export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instruction, textStyle = {}, forceWhite = false }) => {
   // Si l'instruction est vide, retourner null
   if (!instruction) return null;
   
@@ -77,24 +78,30 @@ export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instructio
       } else {
         // Texte mis en évidence selon le type de balise
         let style;
-        switch (part.type) {
-          case 'street':
-            style = styles.street;
-            break;
-          case 'roadNumber':
-            style = styles.roadNumber;
-            break;
-          case 'exit':
-            style = styles.exit;
-            break;
-          case 'direction':
-            style = styles.direction;
-            break;
-          case 'signpost':
-            style = styles.signpost;
-            break;
-          default:
-            style = styles.highlight;
+        if (forceWhite) {
+          // Si forceWhite est activé, on utilise uniquement le style de mise en évidence en blanc
+          style = styles.whiteText;
+        } else {
+          // Sinon, on applique les styles spécifiques selon le type de balise
+          switch (part.type) {
+            case 'street':
+              style = styles.street;
+              break;
+            case 'roadNumber':
+              style = styles.roadNumber;
+              break;
+            case 'exit':
+              style = styles.exit;
+              break;
+            case 'direction':
+              style = styles.direction;
+              break;
+            case 'signpost':
+              style = styles.signpost;
+              break;
+            default:
+              style = styles.highlight;
+          }
         }
         
         return (
@@ -116,6 +123,10 @@ export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instructio
 const styles = StyleSheet.create({
   highlight: {
     fontWeight: 'bold',
+  },
+  whiteText: {
+    fontWeight: 'bold',
+    color: '#FFFFFF', // Blanc pour le mode minimisé
   },
   street: {
     fontWeight: 'bold',

@@ -14,7 +14,7 @@ exports.register = async (req, res, next) => {
         if (!errors.isEmpty()) {
             return res.status(400).json({
                 status: 'error',
-                errors: errors.array()
+                message : errors.array()[0].msg
             });
         }
 
@@ -260,6 +260,35 @@ exports.getAllUsers = async (req, res, next) => {
             status: 'success',
             data: {
                 users
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * Récupérer un utilisateurs pas son id pour l'administration
+ * @route GET /api/auth/getAll
+ * Note: Cette route est protégée par le middleware d'authentification et doit être accessible uniquement aux administrateurs
+ */
+exports.getUserById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const user = await User.findById(id).select('-password');
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Utilisateur non trouvé'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                user
             }
         });
     } catch (error) {

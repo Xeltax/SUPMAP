@@ -40,7 +40,7 @@ import {
     MenuList,
     MenuItem,
     Divider,
-    Stack
+    Stack, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, VStack, Image, ModalFooter
 } from '@chakra-ui/react';
 import {
     FaRoute,
@@ -63,13 +63,14 @@ import {
     FaEllipsisV,
     FaPlusCircle,
     FaHistory,
-    FaExchangeAlt
+    FaExchangeAlt, FaQrcode
 } from 'react-icons/fa';
 import NextLink from 'next/link';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import {FaRoadSpikes} from "react-icons/fa6";
 import api from "@/services/api";
+import {FiDownload} from "react-icons/fi";
 
 // Types
 interface RouteCoordinates {
@@ -175,6 +176,8 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [sortBy, setSortBy] = useState<string>('lastUsed');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [qrCodeData, setQRCodeData] = useState<string | null>(null);
+    const [currentRoute, setCurrentRoute] = useState<Route | null>(null);
 
     const router = useRouter();
     const toast = useToast();
@@ -182,6 +185,7 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const cancelRef = React.useRef<HTMLButtonElement>(null);
     const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
+    const { isOpen: isQRCodeOpen, onOpen: onQRCodeOpen, onClose: onQRCodeClose } = useDisclosure();
 
     // Filtrage des itinéraires
     const filteredRoutes = routes.filter(route => {
@@ -260,6 +264,65 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
             setRouteToDelete(null);
         }
     };
+
+    const handleDownloadQRCode = async (route: Route) => {
+        setCurrentRoute(route);
+        try {
+            const response = await api.routes.generateQRCode(route.id);
+
+            if (!response.data) {
+                toast({
+                    title: "Erreur",
+                    description: "Aucune donnée QR Code reçue.",
+                    status: "error",
+                    duration: 5000,
+                    isClosable: true,
+                });
+                return;
+            }
+
+            setQRCodeData(response.data.qrCode);
+
+            onQRCodeOpen();
+
+            toast({
+                title: "QR Code généré",
+                description: `Le QR Code pour l'itinéraire ${route.name} a été généré avec succès.`,
+                status: "success",
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (error) {
+            console.error('Erreur lors de la génération du QR Code:', error);
+            toast({
+                title: "Erreur",
+                description: "Une erreur est survenue lors de la génération du QR Code.",
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
+        }
+    };
+
+    const downloadQRCode = () => {
+        if (!qrCodeData || !currentRoute) return;
+
+        const link = document.createElement('a');
+        link.href = qrCodeData;
+        link.download = `qrcode-${currentRoute.name.replace(/\s+/g, '-')}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast({
+            title: "QR Code téléchargé",
+            description: "Le QR Code a été téléchargé avec succès.",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+        });
+    };
+
 
     // Fonction pour mettre à jour le statut favori d'un itinéraire
     const toggleFavorite = async (route: Route) => {
@@ -502,6 +565,15 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
                                                         />
 
                                                         <IconButton
+                                                            aria-label={"Générer le QRCode"}
+                                                            icon={<FaQrcode />}
+                                                            onClick={() => handleDownloadQRCode(route)}
+                                                            colorScheme="white"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                        />
+
+                                                        <IconButton
                                                             aria-label={"Supprimer"}
                                                             icon={<FaTrash />}
                                                             onClick={() => handleDeleteClick(route.id)}
@@ -533,6 +605,65 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
                     </Card>
                 </GridItem>
             </Grid>
+
+            {/* Modal QR Code */}
+            <Modal isOpen={isQRCodeOpen} onClose={onQRCodeClose} isCentered size="md">
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalHeader>QR Code de l'itinéraire</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody pb={6}>
+                        {qrCodeData && currentRoute ? (
+                            <VStack spacing={4} align="center">
+                                <Text fontWeight="medium">
+                                    {currentRoute.name}
+                                </Text>
+
+                                <Box
+                                    p={4}
+                                    borderWidth="1px"
+                                    borderRadius="md"
+                                    bg={useColorModeValue('white', 'gray.700')}
+                                    boxShadow="sm"
+                                    width="100%"
+                                    display="flex"
+                                    justifyContent="center"
+                                >
+                                    <Image
+                                        src={qrCodeData}
+                                        alt={`QR Code pour l'itinéraire ${currentRoute.name}`}
+                                        maxW="250px"
+                                        maxH="250px"
+                                    />
+                                </Box>
+
+                                <Text fontSize="sm" color="gray.500" textAlign="center">
+                                    Scannez ce QR code pour accéder à l'itinéraire depuis n'importe quel appareil.
+                                </Text>
+
+                                <Flex gap={4} width="100%" mt={2}>
+                                    <Button
+                                        leftIcon={<FiDownload />}
+                                        colorScheme="blue"
+                                        onClick={downloadQRCode}
+                                        flex="1"
+                                    >
+                                        Télécharger
+                                    </Button>
+
+                                </Flex>
+                            </VStack>
+                        ) : (
+                            <Text>Chargement du QR code...</Text>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="ghost" onClick={onQRCodeClose}>
+                            Fermer
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
 
             {/* Dialog de confirmation de suppression */}
             <AlertDialog

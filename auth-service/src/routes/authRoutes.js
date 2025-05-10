@@ -55,6 +55,7 @@ router.patch('/password', protect, authController.updatePassword);
 
 // Routes d'administration protégées par role
 router.get('/users', protect, restrictTo(["admin"]), authController.getAllUsers);
+router.get('/users/:id', protect, restrictTo(["admin"]), authController.getUserById);
 router.patch('/users/:id', protect, restrictTo(["admin"]), authController.updateUser);
 router.delete('/users/:id', protect, restrictTo(["admin"]), authController.deleteUser);
 

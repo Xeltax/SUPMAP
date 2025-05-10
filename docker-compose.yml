@@ -34,7 +34,7 @@ services:
     ports:
       - "4001:4001"
     environment:
-      NODE_ENV: ${NAV_NODE_ENV}
+      NODE_ENV: ${NAV_NODE_ENV:-development}
       DOTENV_KEY: ${NAV_DOTENV_KEY}
     depends_on:
       postgres:
@@ -44,13 +44,15 @@ services:
 
   # Web Client (Next.js)
   web-client:
-    build: ./web-client
+    build:
+      context : ./web-client
+      args:
+        DOTENV_KEY: ${FRONTEND_DOTENV_KEY}
     ports:
       - "8080:8080"
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
-      - API_URL=http://api-gateway:3000
+      NODE_ENV: ${FRONTEND_NODE_ENV:-development}
+      DOTENV_KEY: ${FRONTEND_DOTENV_KEY}
 
     depends_on:
       - api-gateway

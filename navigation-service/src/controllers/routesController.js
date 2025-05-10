@@ -448,7 +448,6 @@ exports.generateQRCode = async (req, res, next) => {
         const { id } = req.params;
         const userId = req.headers['x-user-id'];
 
-        // Récupérer l'itinéraire
         const route = await Route.findOne({
             where: {
                 id,
@@ -481,7 +480,6 @@ exports.generateQRCode = async (req, res, next) => {
             }
         };
 
-        // Générer le QR code
         const qrCode = await QRCode.toDataURL(JSON.stringify(qrData));
 
         res.status(200).json({

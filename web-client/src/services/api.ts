@@ -10,6 +10,7 @@ export interface ApiResponse<T> {
 }
 
 console.log(process.env.NEXT_PUBLIC_API_URL )
+console.log(process.env.API_URL )
 const isServer = typeof window === 'undefined'
 // Configuration de base d'Axios
 const apiConfig: AxiosRequestConfig = {
@@ -218,6 +219,11 @@ const api = {
 
         getUserReports: async (options?: { bbox?: string; userId?: string; active?: boolean; incidentType?: string }): Promise<ApiResponse<{ incidents: any[] }>> => {
             const response = await apiClient.get<ApiResponse<{ incidents: any[] }>>('/api/navigation/traffic/reports', { params: options });
+            return response.data;
+        },
+
+        resolveTrafficIncident : async (id: string): Promise<ApiResponse<{ incident: any }>> => {
+            const response = await apiClient.patch<ApiResponse<{ incident: any }>>(`/api/navigation/traffic/resolve/${id}`);
             return response.data;
         },
 

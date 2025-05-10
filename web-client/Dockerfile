@@ -7,13 +7,17 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Installation des dépendances
-RUN npm install
+RUN npm install && npm install dotenv-cli
 
 # Copie du reste du code source
 COPY . .
 
+# Définir la variable DOTENV_KEY pour le build
+ARG DOTENV_KEY
+ENV DOTENV_KEY=${DOTENV_KEY}
+
 # Construction de l'application Next.js
-RUN npm run build
+RUN npx dotenv -e .env.vault -- npm run build
 
 # Exposition du port utilisé par l'application
 EXPOSE 8080

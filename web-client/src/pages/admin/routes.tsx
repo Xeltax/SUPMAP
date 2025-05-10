@@ -52,7 +52,7 @@ import {
     Tab,
     TabPanels,
     TabPanel,
-    Icon
+    Icon, VStack
 } from '@chakra-ui/react';
 import { FiMoreVertical, FiSearch, FiTrash2, FiEye, FiMap, FiDownload, FiEdit, FiCalendar, FiClock, FiUser } from 'react-icons/fi';
 import { FaRoute, FaMapMarkerAlt, FaStar } from 'react-icons/fa';
@@ -63,7 +63,7 @@ import api from '@/services/api';
 
 // Types pour les itinéraires
 interface Route {
-    id: string | number;
+    id: string;
     name: string;
     originName: string;
     destinationName: string;
@@ -72,7 +72,7 @@ interface Route {
     waypoints?: Array<[number, number]>;
     distance: number;
     duration: number;
-    userId: string | number;
+    userId: string;
     username: string;
     createdAt: string;
     lastUsed?: string;
@@ -91,16 +91,19 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
     const [loading, setLoading] = useState(false);
+    const [qrCodeData, setQRCodeData] = useState<string | null>(null);
+    const [currentRoute, setCurrentRoute] = useState<Route | null>(null);
 
     const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
     const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+    const { isOpen: isQRCodeOpen, onOpen: onQRCodeOpen, onClose: onQRCodeClose } = useDisclosure();
 
     const toast = useToast();
     const router = useRouter();
 
     // Filtrer les itinéraires
     useEffect(() => {
-        let result = [...routes];
+        let result = routes.length > 0 ? [...routes] : [];
 
         // Filtre de recherche
         if (searchTerm) {
@@ -192,16 +195,26 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
         router.push(`/map?route=${route.id}`);
     };
 
-    // Télécharger le QR code
     const handleDownloadQRCode = async (route: Route) => {
         setLoading(true);
+        setCurrentRoute(route);
         try {
-            // Ici, vous implémenterez l'appel API réel pour générer un QR code
-            // Exemple fictif:
-            // const response = await api.routes.generateQRCode(route.id);
+            const response = await api.routes.generateQRCode(route.id);
 
-            // Simuler un délai
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (!response.data) {
+                toast({
+                    title: "Erreur",
+                    description: "Aucune donnée QR Code reçue.",
+                    status: "error",
+                    duration: 5000,
+                    isClosable: true,
+                });
+                return;
+            }
+
+            setQRCodeData(response.data.qrCode);
+
+            onQRCodeOpen();
 
             toast({
                 title: "QR Code généré",
@@ -224,81 +237,23 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
         }
     };
 
-    // Confirmer la suppression de l'itinéraire
-    const handleConfirmDelete = async () => {
-        if (!selectedRoute) return;
+    const downloadQRCode = () => {
+        if (!qrCodeData || !currentRoute) return;
 
-        setLoading(true);
-        try {
-            // Ici, vous implémenterez l'appel API réel pour supprimer l'itinéraire
-            // Exemple fictif:
-            // await api.routes.deleteRoute(selectedRoute.id);
+        const link = document.createElement('a');
+        link.href = qrCodeData;
+        link.download = `qrcode-${currentRoute.name.replace(/\s+/g, '-')}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
-            // Simuler un délai
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Supprimer l'itinéraire de la liste
-            const updatedRoutes = routes.filter(route => route.id !== selectedRoute.id);
-            setRoutes(updatedRoutes);
-
-            toast({
-                title: "Itinéraire supprimé",
-                description: `L'itinéraire ${selectedRoute.name} a été supprimé avec succès.`,
-                status: "success",
-                duration: 5000,
-                isClosable: true,
-            });
-
-            onDeleteClose();
-        } catch (error) {
-            console.error('Erreur lors de la suppression de l\'itinéraire:', error);
-            toast({
-                title: "Erreur",
-                description: "Une erreur est survenue lors de la suppression de l'itinéraire.",
-                status: "error",
-                duration: 5000,
-                isClosable: true,
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Composant pour la carte statique de l'itinéraire (maquette)
-    const RouteMapPreview = ({ route }: { route: Route }) => {
-        // Ici, vous pourriez utiliser une API comme Mapbox Static API pour générer une image de carte
-        // Pour l'exemple, nous utilisons une image de placeholder
-        return (
-            <Box position="relative" borderRadius="md" overflow="hidden" h="200px" w="100%">
-                <Center
-                    bg={useColorModeValue('gray.100', 'gray.700')}
-                    h="100%"
-                    w="100%"
-                    color={useColorModeValue('gray.500', 'gray.400')}
-                >
-                    <Icon as={FiMap} boxSize={10} />
-                </Center>
-                <Box
-                    position="absolute"
-                    bottom={2}
-                    right={2}
-                    bg="white"
-                    p={2}
-                    borderRadius="md"
-                    boxShadow="md"
-                    fontSize="sm"
-                    color="gray.700"
-                >
-                    <HStack spacing={2}>
-                        <Box as={FaRoute} color="blue.500" />
-                        <Text>{formatDistance(route.distance)}</Text>
-                        <Text>•</Text>
-                        <Box as={FiClock} color="blue.500" />
-                        <Text>{formatDuration(route.duration)}</Text>
-                    </HStack>
-                </Box>
-            </Box>
-        );
+        toast({
+            title: "QR Code téléchargé",
+            description: "Le QR Code a été téléchargé avec succès.",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+        });
     };
 
     return (
@@ -402,14 +357,6 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
                                                 )}
                                             </HStack>
                                         </Th>
-                                        <Th>
-                                            <HStack spacing={1} cursor="pointer" onClick={() => toggleSortOrder('usageCount')}>
-                                                <Text>Utilisations</Text>
-                                                {sortField === 'usageCount' && (
-                                                    <Text>{sortOrder === 'asc' ? '↑' : '↓'}</Text>
-                                                )}
-                                            </HStack>
-                                        </Th>
                                         <Th>Actions</Th>
                                     </Tr>
                                 </Thead>
@@ -437,11 +384,6 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
                                                 </Td>
                                                 <Td>
                                                     <Text fontSize="sm">{formatDate(route.createdAt)}</Text>
-                                                </Td>
-                                                <Td>
-                                                    <Badge colorScheme={route.usageCount > 10 ? "green" : route.usageCount > 5 ? "blue" : "gray"}>
-                                                        {route.usageCount}
-                                                    </Badge>
                                                 </Td>
                                                 <Td>
                                                     <Menu>
@@ -503,101 +445,64 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
                                         {selectedRoute.name}
                                     </Heading>
 
-                                    <Tabs isFitted variant="enclosed" mb={6}>
-                                        <TabList>
-                                            <Tab>Informations</Tab>
-                                            <Tab>Carte</Tab>
-                                        </TabList>
-                                        <TabPanels>
-                                            <TabPanel>
-                                                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
-                                                    <RouteDetailItem
-                                                        icon={FaMapMarkerAlt}
-                                                        label="Point de départ"
-                                                        value={selectedRoute.originName}
-                                                        color="green.500"
-                                                    />
-                                                    <RouteDetailItem
-                                                        icon={FaMapMarkerAlt}
-                                                        label="Destination"
-                                                        value={selectedRoute.destinationName}
-                                                        color="red.500"
-                                                    />
-                                                    <RouteDetailItem
-                                                        icon={FaRoute}
-                                                        label="Distance"
-                                                        value={formatDistance(selectedRoute.distance)}
-                                                        color="blue.500"
-                                                    />
-                                                    <RouteDetailItem
-                                                        icon={FiClock}
-                                                        label="Durée estimée"
-                                                        value={formatDuration(selectedRoute.duration)}
-                                                        color="blue.500"
-                                                    />
-                                                    <RouteDetailItem
-                                                        icon={FiUser}
-                                                        label="Créé par"
-                                                        value={selectedRoute.username}
-                                                        color="purple.500"
-                                                    />
-                                                    <RouteDetailItem
-                                                        icon={FiCalendar}
-                                                        label="Créé le"
-                                                        value={formatDate(selectedRoute.createdAt)}
-                                                        color="gray.500"
-                                                    />
-                                                </SimpleGrid>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
+                                        <RouteDetailItem
+                                            icon={FaMapMarkerAlt}
+                                            label="Point de départ"
+                                            value={selectedRoute.originName}
+                                            color="green.500"
+                                        />
+                                        <RouteDetailItem
+                                            icon={FaMapMarkerAlt}
+                                            label="Destination"
+                                            value={selectedRoute.destinationName}
+                                            color="red.500"
+                                        />
+                                        <RouteDetailItem
+                                            icon={FaRoute}
+                                            label="Distance"
+                                            value={formatDistance(selectedRoute.distance)}
+                                            color="blue.500"
+                                        />
+                                        <RouteDetailItem
+                                            icon={FiClock}
+                                            label="Durée estimée"
+                                            value={formatDuration(selectedRoute.duration)}
+                                            color="blue.500"
+                                        />
+                                        <RouteDetailItem
+                                            icon={FiUser}
+                                            label="Créé par"
+                                            value={selectedRoute.username}
+                                            color="purple.500"
+                                        />
+                                        <RouteDetailItem
+                                            icon={FiCalendar}
+                                            label="Créé le"
+                                            value={formatDate(selectedRoute.createdAt)}
+                                            color="gray.500"
+                                        />
+                                    </SimpleGrid>
 
-                                                <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md" mb={4}>
-                                                    <Heading size="sm" mb={2}>Options de l'itinéraire</Heading>
-                                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                        <Box>
-                                                            <Text fontSize="sm" fontWeight="medium" color="gray.500">Type de route</Text>
-                                                            <Badge>{selectedRoute.routeType || 'Standard'}</Badge>
-                                                        </Box>
-                                                        <Box>
-                                                            <Text fontSize="sm" fontWeight="medium" color="gray.500">Péages</Text>
-                                                            <Badge colorScheme={selectedRoute.avoidTolls ? "green" : "red"}>
-                                                                {selectedRoute.avoidTolls ? 'Évités' : 'Autorisés'}
-                                                            </Badge>
-                                                        </Box>
-                                                        <Box>
-                                                            <Text fontSize="sm" fontWeight="medium" color="gray.500">Dernière utilisation</Text>
-                                                            <Text>{selectedRoute.lastUsed ? formatDate(selectedRoute.lastUsed) : 'Jamais'}</Text>
-                                                        </Box>
-                                                        <Box>
-                                                            <Text fontSize="sm" fontWeight="medium" color="gray.500">Nombre d'utilisations</Text>
-                                                            <Badge colorScheme={selectedRoute.usageCount > 10 ? "green" : selectedRoute.usageCount > 5 ? "blue" : "gray"}>
-                                                                {selectedRoute.usageCount}
-                                                            </Badge>
-                                                        </Box>
-                                                    </SimpleGrid>
-                                                </Box>
-
-                                                <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
-                                                    <Heading size="sm" mb={2}>Coordonnées géographiques</Heading>
-                                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                        <Box>
-                                                            <Text fontSize="sm" fontWeight="medium" color="gray.500">Origine</Text>
-                                                            <Text fontSize="sm" fontFamily="monospace">
-                                                                {selectedRoute.originCoordinates.join(', ')}
-                                                            </Text>
-                                                        </Box>
-                                                        <Box>
-                                                            <Text fontSize="sm" fontWeight="medium" color="gray.500">Destination</Text>
-                                                            <Text fontSize="sm" fontFamily="monospace">
-                                                                {selectedRoute.destinationCoordinates.join(', ')}
-                                                            </Text>
-                                                        </Box>
-                                                    </SimpleGrid>
-                                                </Box>
-                                            </TabPanel>
-                                            <TabPanel>
-                                                <RouteMapPreview route={selectedRoute} />
-                                            </TabPanel>
-                                        </TabPanels>
-                                    </Tabs>
+                                    <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md" mb={4}>
+                                        <Heading size="sm" mb={2}>Options de l'itinéraire</Heading>
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                            <Box>
+                                                <Text fontSize="sm" fontWeight="medium" color="gray.500">Type de route</Text>
+                                                <Badge>{selectedRoute.routeType || 'Standard'}</Badge>
+                                            </Box>
+                                            <Box>
+                                                <Text fontSize="sm" fontWeight="medium" color="gray.500">Péages</Text>
+                                                <Badge colorScheme={selectedRoute.avoidTolls ? "green" : "red"}>
+                                                    {selectedRoute.avoidTolls ? 'Évités' : 'Autorisés'}
+                                                </Badge>
+                                            </Box>
+                                            <Box>
+                                                <Text fontSize="sm" fontWeight="medium" color="gray.500">Dernière utilisation</Text>
+                                                <Text>{selectedRoute.lastUsed ? formatDate(selectedRoute.lastUsed) : 'Jamais'}</Text>
+                                            </Box>
+                                        </SimpleGrid>
+                                    </Box>
                                 </Box>
                             )}
                         </ModalBody>
@@ -615,26 +520,60 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
                     </ModalContent>
                 </Modal>
 
-                {/* Modal de confirmation de suppression */}
-                <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} isCentered size="md">
+                {/* Modal QR Code */}
+                <Modal isOpen={isQRCodeOpen} onClose={onQRCodeClose} isCentered size="md">
                     <ModalOverlay />
                     <ModalContent>
-                        <ModalHeader color="red.500">Supprimer l'itinéraire</ModalHeader>
+                        <ModalHeader>QR Code de l'itinéraire</ModalHeader>
                         <ModalCloseButton />
                         <ModalBody pb={6}>
-                            <Text>
-                                Êtes-vous sûr de vouloir supprimer l'itinéraire <b>{selectedRoute?.name}</b> ?
-                                Cette action est irréversible.
-                            </Text>
+                            {qrCodeData && currentRoute ? (
+                                <VStack spacing={4} align="center">
+                                    <Text fontWeight="medium">
+                                        {currentRoute.name}
+                                    </Text>
+
+                                    <Box
+                                        p={4}
+                                        borderWidth="1px"
+                                        borderRadius="md"
+                                        bg={useColorModeValue('white', 'gray.700')}
+                                        boxShadow="sm"
+                                        width="100%"
+                                        display="flex"
+                                        justifyContent="center"
+                                    >
+                                        <Image
+                                            src={qrCodeData}
+                                            alt={`QR Code pour l'itinéraire ${currentRoute.name}`}
+                                            maxW="250px"
+                                            maxH="250px"
+                                        />
+                                    </Box>
+
+                                    <Text fontSize="sm" color="gray.500" textAlign="center">
+                                        Scannez ce QR code pour accéder à l'itinéraire depuis n'importe quel appareil.
+                                    </Text>
+
+                                    <Flex gap={4} width="100%" mt={2}>
+                                        <Button
+                                            leftIcon={<FiDownload />}
+                                            colorScheme="blue"
+                                            onClick={downloadQRCode}
+                                            flex="1"
+                                        >
+                                            Télécharger
+                                        </Button>
+
+                                    </Flex>
+                                </VStack>
+                            ) : (
+                                <Text>Chargement du QR code...</Text>
+                            )}
                         </ModalBody>
                         <ModalFooter>
-                            <Button mr={3} onClick={onDeleteClose}>Annuler</Button>
-                            <Button
-                                colorScheme="red"
-                                onClick={handleConfirmDelete}
-                                isLoading={loading}
-                            >
-                                Supprimer
+                            <Button variant="ghost" onClick={onQRCodeClose}>
+                                Fermer
                             </Button>
                         </ModalFooter>
                     </ModalContent>
@@ -685,108 +624,48 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Pour l'exemple, utilisons des données simulées
-        // Dans un cas réel, vous feriez un appel API pour récupérer les itinéraires
-        // const routesResponse = await axios.get(`${process.env.API_URL}/api/admin/routes`, config);
-        // const routes = routesResponse.data.data.routes;
+        const routesResponse = await axios.get(
+            `${process.env.API_URL}/api/navigation/routes/user`,
+            config
+        );
 
-        // Exemple de données fictives
-        const routes: Route[] = [
-            {
-                id: 101,
-                name: "Trajet quotidien",
-                originName: "Caen",
-                destinationName: "Bayeux",
-                originCoordinates: [49.1829, -0.3707],
-                destinationCoordinates: [49.2764, -0.7024],
-                distance: 25000,
-                duration: 1800,
-                userId: 1,
-                username: "Jules Martin",
-                createdAt: "2025-04-15T08:00:00Z",
-                lastUsed: "2025-05-02T08:00:00Z",
-                isFavorite: true,
-                usageCount: 42,
-                routeType: "fastest",
-                avoidTolls: true
-            },
-            {
-                id: 102,
-                name: "Route touristique",
-                originName: "Caen",
-                destinationName: "Mont Saint-Michel",
-                originCoordinates: [49.1829, -0.3707],
-                destinationCoordinates: [48.6361, -1.5115],
-                distance: 95000,
-                duration: 5400,
-                userId: 2,
-                username: "Marie Dubois",
-                createdAt: "2025-04-01T14:30:00Z",
-                lastUsed: "2025-04-28T10:15:00Z",
-                isFavorite: true,
-                usageCount: 12,
-                routeType: "scenic",
-                avoidTolls: false
-            },
-            {
-                id: 103,
-                name: "Visite client",
-                originName: "Caen",
-                destinationName: "Rouen",
-                originCoordinates: [49.1829, -0.3707],
-                destinationCoordinates: [49.4431, 1.0989],
-                distance: 120000,
-                duration: 5100,
-                userId: 3,
-                username: "Thomas Bernard",
-                createdAt: "2025-03-20T10:15:00Z",
-                lastUsed: "2025-04-15T14:30:00Z",
-                isFavorite: false,
-                usageCount: 8,
-                routeType: "fastest",
-                avoidTolls: true
-            },
-            {
-                id: 104,
-                name: "Livraison",
-                originName: "Caen",
-                destinationName: "Cherbourg",
-                originCoordinates: [49.1829, -0.3707],
-                destinationCoordinates: [49.6337, -1.6221],
-                distance: 110000,
-                duration: 5700,
-                userId: 1,
-                username: "Jules Martin",
-                createdAt: "2025-03-15T09:45:00Z",
-                lastUsed: "2025-04-10T11:20:00Z",
-                isFavorite: false,
-                usageCount: 5,
-                routeType: "shortest",
-                avoidTolls: true
-            },
-            {
-                id: 105,
-                name: "Week-end à la plage",
-                originName: "Caen",
-                destinationName: "Deauville",
-                originCoordinates: [49.1829, -0.3707],
-                destinationCoordinates: [49.3539, 0.0630],
-                distance: 45000,
-                duration: 2400,
-                userId: 4,
-                username: "Sophie Leroy",
-                createdAt: "2025-02-28T16:10:00Z",
-                lastUsed: "2025-04-05T09:30:00Z",
-                isFavorite: true,
-                usageCount: 15,
-                routeType: "scenic",
-                avoidTolls: false
+        // Créer un tableau de promesses pour récupérer les noms d'utilisateurs
+        const routePromises = routesResponse.data.data.routes.map(async (route : Route) => {
+            try {
+                const userResponse = await axios.get(
+                    `${process.env.API_URL}/api/auth/users/${route.userId}`,
+                    config
+                );
+
+                if (userResponse.data && userResponse.data.data) {
+                    return {
+                        ...route,
+                        username: userResponse.data.data.user.username || "Utilisateur inconnu",
+                    };
+                } else {
+                    return {
+                        ...route,
+                        username: "Utilisateur inconnu",
+                    };
+                }
+            } catch (error) {
+                console.error(`Erreur lors de la récupération de l'utilisateur pour l'itinéraire ${route.id}:`, error);
+                // En cas d'erreur, on retourne l'itinéraire sans nom d'utilisateur
+                return {
+                    ...route,
+                    username: "Utilisateur inconnu",
+                };
             }
-        ];
+        });
+
+        // Attendre que toutes les promesses soient résolues
+        const routesWithUsernames = await Promise.all(routePromises);
+
+        console.log(routesWithUsernames)
 
         return {
             props: {
-                initialRoutes: routes
+                initialRoutes: routesWithUsernames
             },
         };
     } catch (error) {

@@ -8,6 +8,7 @@ const passport = require('passport');
 
 const authRoutes = require('./routes/authRoutes');
 const { setupPassport } = require('./utils/passportConfig');
+const {seedUsers} = require("./utils/seedData");
 
 // Initialiser l'application Express
 const app = express();
@@ -49,8 +50,10 @@ mongoose
         useNewUrlParser: true,
         useUnifiedTopology: true
     })
-    .then(() => {
+    .then(async () => {
         console.log('Connecté à MongoDB');
+
+        await seedUsers();
         // Démarrer le serveur après la connexion à la base de données
         app.listen(PORT, () => {
             console.log(`Auth service running on port ${PORT}`);

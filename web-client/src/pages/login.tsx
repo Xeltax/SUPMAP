@@ -64,7 +64,7 @@ const Login = () => {
     };
 
     const handleSocialLogin = (provider: string) => {
-        window.location.href = `${process.env.API_URL}/api/auth/${provider}`;
+        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/${provider}`;
     };
 
     return (
@@ -111,9 +111,9 @@ const Login = () => {
                             </Stack>
                             <HStack justify="space-between">
                                 <Checkbox defaultChecked>Se souvenir de moi</Checkbox>
-                                <Link as={NextLink} href="/forgot-password" color={useColorModeValue('blue.500', 'blue.300')} fontSize="sm">
-                                    Mot de passe oublié?
-                                </Link>
+                                {/*<Link as={NextLink} href="/forgot-password" color={useColorModeValue('blue.500', 'blue.300')} fontSize="sm">*/}
+                                {/*    Mot de passe oublié?*/}
+                                {/*</Link>*/}
                             </HStack>
                             <Stack spacing="4">
                                 <Button
@@ -142,7 +142,7 @@ const Login = () => {
                     <Text color={useColorModeValue('gray.600', 'gray.400')}>
                         Pas encore de compte?
                     </Text>
-                    <Link as={NextLink} href="/web-client/src/pages/register" color={useColorModeValue('blue.500', 'blue.300')}>
+                    <Link as={NextLink} href="/register" color={useColorModeValue('blue.500', 'blue.300')}>
                         S&apos;inscrire
                     </Link>
                 </HStack>

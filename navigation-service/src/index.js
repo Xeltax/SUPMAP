@@ -2,37 +2,21 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
-const winston = require('winston');
 const sequelize = require('./config/database');
 
 // Routes
 const routesRoutes = require('./routes/routesRoutes');
 const trafficRoutes = require('./routes/trafficRoutes');
-
-// Configuration du logger
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({ filename: 'error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'combined.log' })
-    ]
-});
+const { seedDatabase } = require('./utils/seedData');
 
 // Tester la connexion à la base de données
 sequelize
     .authenticate()
     .then(() => {
-        logger.info('Connexion à PostgreSQL établie avec succès');
         console.log('Connexion à PostgreSQL établie avec succès');
     })
     .catch((err) => {
-        logger.error('Impossible de se connecter à PostgreSQL:', err);
+        console.error('Impossible de se connecter à PostgreSQL:', err);
     });
 
 // Initialiser l'application Express
@@ -44,7 +28,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
-app.use(morgan('dev'));
 
 // Route de santé
 app.get('/health', (req, res) => {
@@ -68,7 +51,7 @@ app.use('*', (req, res) => {
 
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
-    logger.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+    console.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
 
     res.status(err.status || 500).json({
         status: 'error',
@@ -80,13 +63,14 @@ app.use((err, req, res, next) => {
 sequelize.sync({ alter: process.env.NODE_ENV === 'development', force : true })
     .then(() => {
         console.log(`BDD synchronisée avec succès`);
+
         app.listen(PORT, () => {
-            logger.info(`Navigation service running on port ${PORT}`);
             console.log(`Navigation service running on port ${PORT}`);
+            return seedDatabase()
         });
     })
     .catch((err) => {
-        logger.error('Erreur lors de la synchronisation des modèles:', err);
+        console.error('Erreur lors de la synchronisation des modèles:', err);
     });
 
 // Gestion de l'arrêt propre du serveur

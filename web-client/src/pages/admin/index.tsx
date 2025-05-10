@@ -310,11 +310,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         // Pour l'exemple, utilisez des données simulées
         // Dans un cas réel, vous feriez des appels API
 
+        const userResponse = await axios.get(`${process.env.API_URL}/api/auth/users`, config);
+
+        const newUserLastWeek = userResponse.data.data.users.filter((user: any) => {
+            const createdAt = new Date(user.createdAt);
+            const now = new Date();
+            const oneWeekAgo = new Date(now.setDate(now.getDate() - 7));
+            return createdAt >= oneWeekAgo;
+        }).length;
+
         // Récupération des statistiques utilisateurs (fictives pour l'exemple)
         const adminStats: AdminDashboardStats = {
-            totalUsers: 154,
-            activeUsers: 98,
-            newUsersLastWeek: 12,
+            totalUsers: userResponse.data.data.users.length,
+            activeUsers: userResponse.data.data.users.filter((user: any) => user.active).length,
+            newUsersLastWeek: newUserLastWeek,
             totalRoutes: 432,
             routesLastWeek: 45,
             totalIncidents: 67,
@@ -324,12 +333,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         // Récupération des données récentes (fictives pour l'exemple)
         const recentData: RecentData = {
-            recentUsers: [
-                { id: 1, username: "Jules Martin", email: "jules@example.com", createdAt: "2025-05-01T14:30:00Z" },
-                { id: 2, username: "Marie Dubois", email: "marie@example.com", createdAt: "2025-04-30T09:15:00Z" },
-                { id: 3, username: "Thomas Bernard", email: "thomas@example.com", createdAt: "2025-04-29T16:45:00Z" },
-                { id: 4, username: "Sophie Leroy", email: "sophie@example.com", createdAt: "2025-04-28T11:20:00Z" }
-            ],
+            recentUsers: userResponse.data.data.users,
             recentRoutes: [
                 { id: 101, name: "Trajet quotidien", originName: "Caen", destinationName: "Bayeux", distance: 25000, createdAt: "2025-05-02T08:00:00Z" },
                 { id: 102, name: "Route touristique", originName: "Caen", destinationName: "Mont Saint-Michel", distance: 95000, createdAt: "2025-05-01T14:30:00Z" },

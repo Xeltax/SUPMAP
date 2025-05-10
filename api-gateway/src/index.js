@@ -32,21 +32,6 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 
-// Limiter de débit pour éviter les attaques par force brute
-const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Limite chaque IP à 100 requêtes par fenêtre
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-        status: 'error',
-        message: 'Trop de requêtes, veuillez réessayer plus tard'
-    }
-});
-
-// Appliquer le limiteur à toutes les routes
-app.use(apiLimiter);
-
 // Middleware de vérification du token JWT
 const validateToken = require('./middleware/validateToken');
 

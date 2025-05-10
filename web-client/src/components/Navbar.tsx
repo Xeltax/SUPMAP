@@ -33,7 +33,7 @@ import {
 import NextLink from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
-import { FaMap, FaRoute, FaExclamationTriangle, FaUser } from 'react-icons/fa';
+import {FaMap, FaRoute, FaExclamationTriangle, FaUser, FaCrown} from 'react-icons/fa';
 
 interface NavbarProps {
     minimal?: boolean;
@@ -49,6 +49,8 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
         await logout();
         router.push('/');
     };
+
+    console.log('user', user);
 
     return (
         <Box>
@@ -129,6 +131,11 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                         <MenuItem icon={<FaUser />} onClick={() => router.push('/profile')}>
                                             Mon profil
                                         </MenuItem>
+                                        {user?.role === 'admin' &&
+                                            <MenuItem icon={<FaCrown />} onClick={() => router.push('/admin')}>
+                                                Administration
+                                            </MenuItem>
+                                        }
                                         <MenuItem icon={<FaRoute />} onClick={() => router.push('/routes')}>
                                             Mes itinéraires
                                         </MenuItem>

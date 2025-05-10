@@ -248,6 +248,108 @@ exports.logout = (req, res) => {
 };
 
 /**
+ * Récupérer tous les utilisateurs pour l'administration
+ * @route GET /api/auth/getAll
+ * Note: Cette route est protégée par le middleware d'authentification et doit être accessible uniquement aux administrateurs
+ */
+exports.getAllUsers = async (req, res, next) => {
+    try {
+        const users = await User.find().select('-password'); // Exclure le mot de passe
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                users
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * Modifier un utilisateur par l'administrateur
+ * @route PATCH /api/auth/users/:id
+ * Note: Cette route est protégée par le middleware d'authentification et doit être accessible uniquement aux administrateurs
+ */
+
+exports.updateUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { username, email, role, active } = req.body;
+
+        // Vérifier les erreurs de validation
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                status: 'error',
+                errors: errors.array()
+            });
+        }
+
+        // Vérifier si l'utilisateur existe
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Utilisateur non trouvé'
+            });
+        }
+
+        // Mettre à jour l'utilisateur
+        user.username = username || user.username;
+        user.email = email || user.email;
+        user.role = role || user.role;
+        user.active = active !== undefined ? active : user.active;
+
+        await user.save();
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                user: user.toPublicJSON()
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+/**
+ * Supprime un utilisateur par l'administrateur
+ * @route DELETE /api/auth/users/:id
+ * Note: Cette route est protégée par le middleware d'authentification et doit être accessible uniquement aux administrateurs
+ */
+
+exports.deleteUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Vérifier si l'utilisateur existe
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Utilisateur non trouvé'
+            });
+        }
+
+        // Supprimer l'utilisateur
+        await user.deleteOne();
+
+        res.status(204).json({
+            status: 'success',
+            message: 'Utilisateur supprimé avec succès'
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
  * Callback pour l'authentification OAuth Google
  * @route GET /api/auth/google/callback
  */

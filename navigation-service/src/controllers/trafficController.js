@@ -50,6 +50,7 @@ exports.getTrafficInfo = async (req, res, next) => {
  */
 exports.getTrafficIncidents = async (req, res, next) => {
     try {
+        console.log("pass here amigo 1")
         const { bbox, incidentType } = req.query;
 
         if (!bbox) {
@@ -68,6 +69,8 @@ exports.getTrafficIncidents = async (req, res, next) => {
                 message: 'La boîte englobante (bbox) doit contenir 4 valeurs [minLon, minLat, maxLon, maxLat]'
             });
         }
+
+        console.log("pass here amigo")
 
         // Obtenir les incidents de trafic depuis l'API TomTom
         const tomtomIncidents = await tomtomService.getTrafficIncidents({
@@ -142,6 +145,7 @@ exports.getTrafficIncidents = async (req, res, next) => {
             }
         });
     } catch (error) {
+        console.log(" pass here with errro")
         next(error);
     }
 };

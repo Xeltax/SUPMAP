@@ -23,7 +23,7 @@ const restrictTo = (...roles) => {
         }
 
         // Vérifier si le rôle de l'utilisateur est dans la liste des rôles autorisés
-        if (!roles.includes(req.user.role)) {
+        if (!roles[0].includes(req.user.role)) {
             return res.status(403).json({
                 status: 'error',
                 message: 'Non autorisé à accéder à cette ressource'

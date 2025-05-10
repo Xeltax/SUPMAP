@@ -583,10 +583,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             }
         );
 
-        const routesResponse = await axios.get(
-            `${process.env.API_URL}/api/navigation/traffic/routes`,
-            config
-        );
+        console.log('incidentsResponse', incidentsResponse.data.data.incidents);
 
         return {
             props: {

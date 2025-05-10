@@ -141,8 +141,6 @@ class NavigationService {
     originCoordinates: Coordinates;
     destinationCoordinates: Coordinates;
     waypoints?: { name: string; coordinates: Coordinates }[];
-    routeData: any;
-    geometry: any;
     distance: number;
     duration: number;
     avoidTolls?: boolean;
@@ -150,14 +148,25 @@ class NavigationService {
     isFavorite?: boolean;
   }) {
     try {
-      // Méthode à implémenter si nécessaire, pour l'instant nous retournons un objet factice
-      // Une fois le endpoint disponible dans l'API, cette méthode pourra être mise à jour
-      return {
-        status: 'success',
-        data: {
-          route: routeData
-        }
-      };
+      // Appel à l'API pour sauvegarder l'itinéraire
+      const response = await api.routes.save({
+        name: routeData.name,
+        originName: routeData.originName,
+        destinationName: routeData.destinationName,
+        originCoordinates: routeData.originCoordinates,
+        destinationCoordinates: routeData.destinationCoordinates,
+        waypoints: routeData.waypoints?.map(wp => ({
+          name: wp.name,
+          coordinates: wp.coordinates
+        })),
+        distance: routeData.distance,
+        duration: routeData.duration,
+        avoidTolls: routeData.avoidTolls,
+        routeType: routeData.routeType,
+        isFavorite: routeData.isFavorite
+      });
+      
+      return response;
     } catch (error) {
       console.error('Error saving route:', error);
       throw error;

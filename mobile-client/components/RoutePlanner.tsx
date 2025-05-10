@@ -52,6 +52,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({ onRouteCalculated })
       });
       
       // Récupérer le nom de l'adresse actuelle via geocoding inverse
+      let locationName = 'Position actuelle';
       try {
         const reverseGeocode = await Location.reverseGeocodeAsync({
           latitude: location.coords.latitude,
@@ -67,18 +68,21 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({ onRouteCalculated })
             address.postalCode
           ].filter(Boolean).join(', ');
           
-          setOriginSearch(addressName || 'Position actuelle');
+          if (addressName) {
+            locationName = addressName;
+          }
+          setOriginSearch(locationName);
         } else {
-          setOriginSearch('Position actuelle');
+          setOriginSearch(locationName);
         }
       } catch (error) {
         console.error('Erreur de géocodage inverse:', error);
-        setOriginSearch('Position actuelle');
+        setOriginSearch(locationName);
       }
       
-      // Définir la position actuelle comme point de départ
+      // Définir la position actuelle comme point de départ avec l'adresse réelle
       setOriginLocation({
-        name: 'Position actuelle',
+        name: locationName,
         coordinates: [location.coords.longitude, location.coords.latitude]
       });
       

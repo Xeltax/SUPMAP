@@ -216,20 +216,43 @@ const api = {
     },
 
     search: async (query: string, options?: { limit?: number; countrySet?: string }): Promise<ApiResponse<{ locations: any[] }>> => {
-      const queryParams = new URLSearchParams({ query, ...options as any }).toString();
-      const { data } = await customFetch(`/api/navigation/routes/search?${queryParams}`, {
-        method: 'GET',
+      const params = new URLSearchParams();
+      params.append('query', query);
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.countrySet) params.append('countrySet', options.countrySet);
+      const { data } = await customFetch(`/api/navigation/routes/search?${params.toString()}`);
+      return data;
+    },
+
+    save: async (routeData: {
+      name: string;
+      originName: string;
+      destinationName: string;
+      originCoordinates: [number, number];
+      destinationCoordinates: [number, number];
+      waypoints?: { name: string; coordinates: [number, number] }[];
+      distance: number;
+      duration: number;
+      avoidTolls?: boolean;
+      routeType?: string;
+      isFavorite?: boolean;
+    }): Promise<ApiResponse<{ route: any }>> => {
+      const { data } = await customFetch('/api/navigation/routes/save', {
+        method: 'POST',
+        body: JSON.stringify(routeData),
       });
       return data;
     },
 
     getUserRoutes: async (options?: { favorite?: boolean; sort?: string; limit?: number; offset?: number }): Promise<ApiResponse<{ routes: any[] }>> => {
-      const queryParams = options ? new URLSearchParams(options as any).toString() : '';
-      const { data } = await customFetch(`/api/navigation/routes/user${queryParams ? `?${queryParams}` : ''}`, {
-        method: 'GET',
-      });
+      const params = new URLSearchParams();
+      if (options?.favorite !== undefined) params.append('favorite', options.favorite.toString());
+      if (options?.sort) params.append('sort', options.sort);
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.offset) params.append('offset', options.offset.toString());
+      const { data } = await customFetch(`/api/navigation/routes/user${params.toString() ? `?${params.toString()}` : ''}`);
       return data;
-    }
+    },
   },
 
   // Traffic and incidents

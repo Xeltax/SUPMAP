@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Route } from '../services/navigationService';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { Route, Coordinates } from '../services/navigationService';
 import { Ionicons } from '@expo/vector-icons';
+import { navigationService } from '../services/navigationService';
 
 interface RouteOptionsProps {
   routes: Route[];
@@ -9,6 +10,16 @@ interface RouteOptionsProps {
   onConfirmRoute: (index: number) => void;
   onClose?: () => void;
   selectedRouteIndex: number;
+  originLocation?: {
+    name: string;
+    coordinates: Coordinates | [number, number];
+  } | null;
+  destinationLocation?: {
+    name: string;
+    coordinates: Coordinates | [number, number];
+  } | null;
+  routeType?: string;
+  avoidTolls?: boolean;
 }
 
 /**
@@ -82,15 +93,79 @@ export const RouteOptions: React.FC<RouteOptionsProps> = ({
   onPreviewRoute,
   onConfirmRoute,
   onClose,
-  selectedRouteIndex
+  selectedRouteIndex,
+  originLocation,
+  destinationLocation,
+  routeType = 'fastest',
+  avoidTolls = false
 }) => {
   // Si selectedRouteIndex est -1, aucun itinéraire n'est sélectionné
   const [localSelectedIndex, setLocalSelectedIndex] = useState<number>(selectedRouteIndex >= 0 ? selectedRouteIndex : -1);
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [routeName, setRouteName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   
   // Mettre à jour la sélection locale et notifier le parent
   const handleRouteSelect = (index: number) => {
     setLocalSelectedIndex(index);
     onPreviewRoute(index);
+  };
+  
+  // Ouvrir le modal pour sauvegarder l'itinéraire
+  const openSaveModal = () => {
+    if (localSelectedIndex < 0) {
+      Alert.alert('Erreur', 'Veuillez sélectionner un itinéraire à sauvegarder');
+      return;
+    }
+    setSaveModalVisible(true);
+    setRouteName('');
+  };
+  
+  // Fermer le modal
+  const closeSaveModal = () => {
+    setSaveModalVisible(false);
+  };
+  
+  // Sauvegarder l'itinéraire
+  const saveRoute = async () => {
+    if (!routeName.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer un nom pour l\'itinéraire');
+      return;
+    }
+    
+    if (!originLocation || !destinationLocation) {
+      Alert.alert('Erreur', 'Informations d\'origine ou de destination manquantes');
+      return;
+    }
+    
+    const selectedRoute = routes[localSelectedIndex];
+    
+    setIsSaving(true);
+    try {
+      const response = await navigationService.saveRoute({
+        name: routeName,
+        originName: originLocation.name,
+        destinationName: destinationLocation.name,
+        originCoordinates: originLocation.coordinates,
+        destinationCoordinates: destinationLocation.coordinates,
+        distance: selectedRoute.distance,
+        duration: selectedRoute.duration,
+        avoidTolls,
+        routeType
+      });
+      
+      if (response.status === 'success') {
+        Alert.alert('Succès', 'Itinéraire sauvegardé avec succès');
+        closeSaveModal();
+      } else {
+        Alert.alert('Erreur', 'Une erreur est survenue lors de la sauvegarde');
+      }
+    } catch (error) {
+      console.error('Error saving route:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la sauvegarde');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Trouver l'itinéraire le plus rapide pour référence
@@ -163,15 +238,75 @@ export const RouteOptions: React.FC<RouteOptionsProps> = ({
         })}
       </ScrollView>
       
-      <TouchableOpacity 
-        style={[styles.validateButton, localSelectedIndex < 0 && styles.disabledButton]}
-        onPress={() => localSelectedIndex >= 0 && onConfirmRoute(localSelectedIndex)}
-        disabled={localSelectedIndex < 0}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={[styles.saveButton, localSelectedIndex < 0 && styles.disabledButton]}
+          onPress={openSaveModal}
+          disabled={localSelectedIndex < 0}
+        >
+          <Ionicons name="bookmark-outline" size={18} color="white" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Sauvegarder</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.validateButton, localSelectedIndex < 0 && styles.disabledButton]}
+          onPress={() => localSelectedIndex >= 0 && onConfirmRoute(localSelectedIndex)}
+          disabled={localSelectedIndex < 0}
+        >
+          <Ionicons name="checkmark-outline" size={18} color="white" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Valider</Text>
+        </TouchableOpacity>
+      </View>
+      
+      {/* Modal pour sauvegarder l'itinéraire */}
+      <Modal
+        visible={saveModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeSaveModal}
       >
-        <Text style={styles.validateButtonText}>
-          {localSelectedIndex >= 0 ? 'Valider cet itinéraire' : 'Sélectionnez un itinéraire'}
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={closeSaveModal}
+        >
+          <TouchableOpacity 
+            style={styles.modalContent} 
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sauvegarder l'itinéraire</Text>
+              <TouchableOpacity onPress={closeSaveModal}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.inputLabel}>Nom de l'itinéraire</Text>
+              <TextInput
+                style={styles.input}
+                value={routeName}
+                onChangeText={setRouteName}
+                placeholder="Ex: Trajet domicile-travail"
+                autoFocus
+              />
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.saveModalButton}
+              onPress={saveRoute}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveModalButtonText}>Sauvegarder</Text>
+              )}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -279,21 +414,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
   validateButton: {
     backgroundColor: '#2196F3',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 8,
-    marginTop: 16,
+    flex: 1,
+    marginLeft: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
   },
-  validateButtonText: {
+  saveButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
+  buttonIcon: {
+    marginRight: 8,
+  },
   disabledButton: {
     backgroundColor: '#cccccc',
     opacity: 0.7,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalBody: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  saveModalButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveModalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

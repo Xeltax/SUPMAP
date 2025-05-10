@@ -165,6 +165,10 @@ export default function MapScreen() {
                 onPreviewRoute={previewRoute}
                 onConfirmRoute={confirmRoute}
                 onClose={stopNavigation}
+                originLocation={originLocation}
+                destinationLocation={destinationLocation}
+                routeType={'fastest'}
+                avoidTolls={false}
               />
             </View>
           )}

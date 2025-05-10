@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { StyleSheet, View, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Dimensions } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT, UrlTile } from 'react-native-maps';
-import { Coordinates } from '../services/navigationService';
 import * as Location from 'expo-location';
 
 interface MapProps {
@@ -14,13 +13,13 @@ interface MapProps {
   followUserLocation?: boolean;
   showUserLocation?: boolean;
   fitRouteToBounds?: boolean;
-  bottomPadding?: number; // Padding en bas de la carte
+  bottomPadding?: number;
   children?: React.ReactNode;
 }
 
 const { width, height } = Dimensions.get('window');
 const ASPECT_RATIO = width / height;
-const LATITUDE_DELTA = 0.05; // Zoom initial modéré
+const LATITUDE_DELTA = 0.05;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 
 export const Map: React.FC<MapProps> = ({
@@ -42,7 +41,6 @@ export const Map: React.FC<MapProps> = ({
     longitude: number;
   } | null>(null);
 
-  // Request location permissions and get user location
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -63,52 +61,39 @@ export const Map: React.FC<MapProps> = ({
     })();
   }, []);
 
-  // Fonction pour ajuster la carte pour montrer tout l'itinéraire
   const fitMapToRoute = () => {
     if (!mapRef.current) return;
     
-    // Collecter tous les points à inclure dans les limites
     const points: { latitude: number; longitude: number }[] = [];
     
-    // Ajouter le point de départ s'il existe
     if (origin) points.push(origin);
     
-    // Ajouter la destination si elle existe
     if (destination) points.push(destination);
     
-    // Ajouter les waypoints
     if (waypoints && waypoints.length > 0) {
       points.push(...waypoints);
     }
     
-    // Si on a un itinéraire principal, ajouter ses points (ou un échantillon)
     if (routeCoordinates && routeCoordinates.length > 0) {
-      // Pour éviter de surcharger avec trop de points, on peut ajouter un échantillon
-      // Ajouter points tous les 10 points pour garder la forme générale
       for (let i = 0; i < routeCoordinates.length; i += 10) {
         points.push(routeCoordinates[i]);
       }
     }
     
-    // Si des itinéraires alternatifs sont disponibles, ajouter leurs points extrêmes
     if (alternativeRoutes && alternativeRoutes.length > 0) {
       alternativeRoutes.forEach(route => {
         if (route.coordinates && route.coordinates.length > 0) {
-          // Ajouter le premier et dernier point de chaque itinéraire alternatif
           points.push(route.coordinates[0]);
           points.push(route.coordinates[route.coordinates.length - 1]);
           
-          // Ajouter quelques points au milieu pour capturer les détours importants
           const middle = Math.floor(route.coordinates.length / 2);
           points.push(route.coordinates[middle]);
         }
       });
     }
     
-    // S'assurer qu'on a au moins 2 points pour calculer une région
     if (points.length < 2) return;
     
-    // Trouver les limites (min/max de latitude et longitude)
     let minLat = points[0].latitude;
     let maxLat = points[0].latitude;
     let minLng = points[0].longitude;
@@ -121,33 +106,27 @@ export const Map: React.FC<MapProps> = ({
       maxLng = Math.max(maxLng, point.longitude);
     });
     
-    // Calculer le delta avec une marge
-    const PADDING = 1.5; // 50% de marge autour des points extrêmes
+    const PADDING = 1.5;
     const latDelta = (maxLat - minLat) * PADDING || 0.02;
     const lngDelta = (maxLng - minLng) * PADDING || 0.02;
     
-    // Décaler le centre vers le haut pour compenser le padding en bas
-    // On calcule la déviation nécessaire pour ajuster visuellement le centre
-    const screenHeight = height; // height from Dimensions
+    const screenHeight = height;
     const latitudeShift = bottomPadding > 0 ? (bottomPadding / screenHeight * latDelta / 2) : 0;
     
-    // Animer la carte vers cette région en décalant le centre vers le haut
     mapRef.current.animateToRegion({
-      latitude: (minLat + maxLat) / 2 + latitudeShift, // Décaler vers le haut
+      latitude: (minLat + maxLat) / 2 + latitudeShift,
       longitude: (minLng + maxLng) / 2,
-      latitudeDelta: Math.max(latDelta, 0.01), // Au moins un petit delta pour éviter le zoom excessif
+      latitudeDelta: Math.max(latDelta, 0.01),
       longitudeDelta: Math.max(lngDelta, 0.01)
     }, 500);
   };
   
-  // Ajuster la carte pour montrer la route complète quand demandé
   useEffect(() => {
     if (fitRouteToBounds) {
       fitMapToRoute();
     }
   }, [fitRouteToBounds, origin, destination, routeCoordinates, alternativeRoutes, waypoints]);
 
-  // Fit map to show all relevant points
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -170,7 +149,6 @@ export const Map: React.FC<MapProps> = ({
       return;
     }
 
-    // Function to fit all markers on screen
     mapRef.current.fitToCoordinates(points, {
       edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
       animated: true,
@@ -181,10 +159,10 @@ export const Map: React.FC<MapProps> = ({
     <View style={styles.container}>
       <MapView
         ref={mapRef}
-        style={styles.map}
+        style={[styles.map, { height: height + 50 }]}
         provider={PROVIDER_DEFAULT}
         initialRegion={{
-          latitude: origin?.latitude || userLocation?.latitude || 48.866667, // Default to Paris
+          latitude: origin?.latitude || userLocation?.latitude || 48.866667,
           longitude: origin?.longitude || userLocation?.longitude || 2.333333,
           latitudeDelta: LATITUDE_DELTA,
           longitudeDelta: LONGITUDE_DELTA,
@@ -192,15 +170,15 @@ export const Map: React.FC<MapProps> = ({
         showsUserLocation={showUserLocation}
         followsUserLocation={followUserLocation}
         onPress={(e) => onMapPress && onMapPress(e.nativeEvent.coordinate)}
-        minZoomLevel={3} // Permettre un dézoom important
-        maxZoomLevel={19} // Zoom maximal
-        rotateEnabled={true} // Permettre la rotation pour une meilleure navigation
-        pitchEnabled={true} // Permettre l'inclinaison pour une expérience 3D
-        toolbarEnabled={false}
+        minZoomLevel={3} 
+        maxZoomLevel={19} 
+        rotateEnabled={true} 
+        pitchEnabled={true} 
+        toolbarEnabled={false} 
         zoomEnabled={true}
-        zoomControlEnabled={true} // Activer les contrôles de zoom
+        zoomControlEnabled={false} 
         loadingEnabled={true}
-        moveOnMarkerPress={true} // Déplacement sur le marqueur quand on clique dessus
+        moveOnMarkerPress={true} 
       >
         {/* OpenStreetMap tiles */}
         <UrlTile 
@@ -271,10 +249,10 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-    // Légèrement surdimensionner la carte pour masquer le logo tout en permettant le dézoom
-    height: '105%',
-    width: '105%',
-    marginLeft: -10,
-    marginBottom: -10,
+    height: '115%',
+    width: '115%',
+    marginLeft: -5,
+    marginRight: -5,
+    marginBottom: -30,
   },
 });

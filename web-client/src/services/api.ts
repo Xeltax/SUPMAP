@@ -108,6 +108,21 @@ const api = {
             localStorage.removeItem('user');
             const response = await apiClient.post<ApiResponse<null>>('/api/auth/logout');
             return response.data;
+        },
+
+        getAllUsers: async (): Promise<ApiResponse<{ users: any }>> => {
+            const response = await apiClient.get<ApiResponse<{ users: any }>>('/api/auth/users');
+            return response.data;
+        },
+
+        updateById: async (id: string, newData : any): Promise<ApiResponse<{ user: any }>> => {
+            const response = await apiClient.patch<ApiResponse<{ user: any }>>(`/api/auth/users/${id}`, newData);
+            return response.data;
+        },
+
+        deleteById: async (id: string): Promise<ApiResponse<{ user: any }>> => {
+            const response = await apiClient.delete<ApiResponse<{ user: any }>>(`/api/auth/users/${id}`);
+            return response.data;
         }
     },
 

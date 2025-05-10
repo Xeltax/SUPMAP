@@ -41,6 +41,8 @@ app.use((err, req, res, next) => {
     });
 });
 
+console.log(process.env.MONGO_URI)
+
 // Connexion à MongoDB
 mongoose
     .connect(process.env.MONGO_URI, {

@@ -2,7 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const passport = require('passport');
 const authController = require('../controllers/authController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, restrictTo} = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -52,6 +52,11 @@ router.post('/logout', authController.logout);
 router.get('/me', protect, authController.getMe);
 router.patch('/me', protect, updateProfileValidation, authController.updateMe);
 router.patch('/password', protect, authController.updatePassword);
+
+// Routes d'administration protégées par role
+router.get('/users', protect, restrictTo(["admin"]), authController.getAllUsers);
+router.patch('/users/:id', protect, restrictTo(["admin"]), authController.updateUser);
+router.delete('/users/:id', protect, restrictTo(["admin"]), authController.deleteUser);
 
 // Routes d'authentification OAuth Google
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));

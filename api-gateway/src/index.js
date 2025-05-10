@@ -138,7 +138,7 @@ app.use('*', (req, res) => {
 
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
-    logger.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+    console.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
 
     res.status(err.status || 500).json({
         status: 'error',
@@ -148,7 +148,6 @@ app.use((err, req, res, next) => {
 
 // Démarrer le serveur
 app.listen(PORT, () => {
-    logger.info(`API Gateway running on port ${PORT}`);
     console.log(`API Gateway running on port ${PORT}`);
 });
 

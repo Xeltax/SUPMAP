@@ -9,7 +9,6 @@ const sequelize = new Sequelize(
         host: process.env.POSTGRES_HOST || 'postgres',
         port: process.env.POSTGRES_PORT || 5432,
         dialect: 'postgres',
-        logging: (msg) => logger.debug(msg),
         dialectOptions: {
             // Options spécifiques pour PostgreSQL
             ssl: process.env.POSTGRES_SSL === 'true' ? {

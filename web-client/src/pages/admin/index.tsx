@@ -72,6 +72,27 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
         }).format(date);
     };
 
+    const renderType = (type : string) => {
+        switch (type) {
+            case 'accident':
+                return 'Accident';
+            case 'roadworks':
+                return 'Travaux';
+            case 'roadClosed':
+                return 'Route fermée';
+            case 'hazard':
+                return 'Obstacle';
+            case 'congestion':
+                return 'Embouteillage';
+            case 'flood':
+                return 'Inondation';
+            case 'police':
+                return 'Contrôle de police';
+            default:
+                return 'Autre';
+        }
+    }
+
     return (
         <AdminLayout>
             <Box maxW="7xl" mx="auto">
@@ -242,22 +263,22 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
                                                         p={3}
                                                         borderWidth="1px"
                                                         borderRadius="md"
-                                                        bg={incident.isActive ? "orange.50" : "gray.50"}
-                                                        _dark={{ bg: incident.isActive ? "orange.900" : "gray.700" }}
+                                                        bg={incident.active ? "orange.50" : "gray.50"}
+                                                        _dark={{ bg: incident.active ? "orange.900" : "gray.700" }}
                                                         borderLeftWidth="4px"
-                                                        borderLeftColor={incident.isActive ? "orange.500" : "gray.400"}
+                                                        borderLeftColor={incident.active ? "orange.500" : "gray.400"}
                                                     >
                                                         <Flex justify="space-between" align="center">
-                                                            <Heading size="sm">{incident.incidentType}</Heading>
+                                                            <Heading size="sm">{renderType(incident.incidentType)}</Heading>
                                                             <Text
                                                                 fontSize="xs"
                                                                 px={2}
                                                                 py={1}
                                                                 borderRadius="full"
-                                                                bg={incident.isActive ? "orange.200" : "gray.200"}
-                                                                _dark={{ bg: incident.isActive ? "orange.700" : "gray.600" }}
+                                                                bg={incident.active ? "orange.200" : "gray.200"}
+                                                                _dark={{ bg: incident.active ? "orange.700" : "gray.600" }}
                                                             >
-                                                                {incident.isActive ? "Actif" : "Résolu"}
+                                                                {incident.active ? "Actif" : "Résolu"}
                                                             </Text>
                                                         </Flex>
                                                         <Text mt={1} fontSize="sm">{incident.description || "Aucune description"}</Text>
@@ -302,15 +323,35 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Pour l'exemple, utilisez des données simulées
-        // Dans un cas réel, vous feriez des appels API
-
         const userResponse = await axios.get(`${process.env.API_URL}/api/auth/users`, config);
+
+        const routesResponse = await axios.get(
+            `${process.env.API_URL}/api/navigation/routes/user`,
+            config
+        );
+
+        const newRoutesLastWeek = routesResponse.data.data.routes.filter((route: any) => {
+            const createdAt = new Date(route.createdAt);
+            const now = new Date();
+            const oneWeekAgo = new Date(now.setDate(now.getDate() - 7));
+            return createdAt >= oneWeekAgo;
+        }).length;
+
+        const incidentsResponse = await axios.get(
+            `${process.env.API_URL}/api/navigation/traffic/reports`,
+            config
+        );
+
+        const newIncidentsLastWeek = incidentsResponse.data.data.incidents.filter((incident: any) => {
+            const createdAt = new Date(incident.createdAt);
+            const now = new Date();
+            const oneWeekAgo = new Date(now.setDate(now.getDate() - 7));
+            return createdAt >= oneWeekAgo;
+        }).length;
 
         const newUserLastWeek = userResponse.data.data.users.filter((user: any) => {
             const createdAt = new Date(user.createdAt);
@@ -319,33 +360,21 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return createdAt >= oneWeekAgo;
         }).length;
 
-        // Récupération des statistiques utilisateurs (fictives pour l'exemple)
         const adminStats: AdminDashboardStats = {
             totalUsers: userResponse.data.data.users.length,
             activeUsers: userResponse.data.data.users.filter((user: any) => user.active).length,
             newUsersLastWeek: newUserLastWeek,
-            totalRoutes: 432,
-            routesLastWeek: 45,
-            totalIncidents: 67,
-            activeIncidents: 23,
-            incidentsLastWeek: 8
+            totalRoutes: routesResponse.data.data.routes.length,
+            routesLastWeek: newRoutesLastWeek,
+            totalIncidents: incidentsResponse.data.data.incidents.length,
+            activeIncidents: incidentsResponse.data.data.incidents.filter((incident: any) => incident.active).length,
+            incidentsLastWeek: newIncidentsLastWeek
         };
 
-        // Récupération des données récentes (fictives pour l'exemple)
         const recentData: RecentData = {
             recentUsers: userResponse.data.data.users,
-            recentRoutes: [
-                { id: 101, name: "Trajet quotidien", originName: "Caen", destinationName: "Bayeux", distance: 25000, createdAt: "2025-05-02T08:00:00Z" },
-                { id: 102, name: "Route touristique", originName: "Caen", destinationName: "Mont Saint-Michel", distance: 95000, createdAt: "2025-05-01T14:30:00Z" },
-                { id: 103, name: "Visite client", originName: "Caen", destinationName: "Rouen", distance: 120000, createdAt: "2025-04-30T10:15:00Z" },
-                { id: 104, name: "Livraison", originName: "Caen", destinationName: "Cherbourg", distance: 110000, createdAt: "2025-04-29T09:45:00Z" }
-            ],
-            recentIncidents: [
-                { id: 201, incidentType: "Accident", description: "Collision entre deux véhicules", isActive: true, username: "Thomas Bernard", createdAt: "2025-05-02T16:30:00Z" },
-                { id: 202, incidentType: "Travaux", description: "Réduction à une voie", isActive: true, username: "Sophie Leroy", createdAt: "2025-05-01T11:45:00Z" },
-                { id: 203, incidentType: "Route bloquée", description: "Arbre tombé sur la chaussée", isActive: false, username: "Jules Martin", createdAt: "2025-04-30T14:20:00Z" },
-                { id: 204, incidentType: "Embouteillage", description: "Trafic dense", isActive: false, username: "Marie Dubois", createdAt: "2025-04-29T17:15:00Z" }
-            ]
+            recentRoutes: routesResponse.data.data.routes,
+            recentIncidents: incidentsResponse.data.data.incidents
         };
 
         return {

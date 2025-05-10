@@ -25,6 +25,13 @@ router.get('/incidents', trafficController.getTrafficIncidents);
 router.post('/report', trafficController.reportTrafficIncident);
 
 /**
+ * @route PATCH /api/traffic/resolve
+ * @desc Resolut un incident de trafic
+ * @access Privé
+ */
+router.patch('/resolve/:id', trafficController.resolveTrafficIncident);
+
+/**
  * @route GET /api/traffic/reports
  * @desc Récupère les signalements d'incidents créés par les utilisateurs
  * @access Privé

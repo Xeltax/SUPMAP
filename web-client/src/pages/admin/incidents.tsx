@@ -1,4 +1,3 @@
-// pages/admin/incidents.tsx
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import {
@@ -79,32 +78,31 @@ import {
     FaCarCrash,
     FaTools,
     FaSnowflake,
-    FaTrafficLight
+    FaTrafficLight, FaHammer, FaCar, FaExclamationCircle
 } from 'react-icons/fa';
 import AdminLayout from '@/components/AdminLayout';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import api from '@/services/api';
+import {FaRoadBarrier} from "react-icons/fa6";
 
-// Types pour les incidents
 interface Incident {
-    id: string | number;
+    id: string;
     incidentType: string;
     description: string;
     coordinates: [number, number];
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    status: 'active' | 'resolved' | 'pending';
-    userId: string | number;
+    severity: 'low' | 'moderate' | 'high' | 'severe';
+    active: boolean;
+    userId: string;
     username: string;
     createdAt: string;
     updatedAt?: string;
     expiresAt?: string;
-    validationCount: number;
-    invalidationCount: number;
+    validations: number;
+    invalidations: number;
     isVerified: boolean;
 }
 
-// Composant principal
 const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) => {
     const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
     const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>(initialIncidents);
@@ -117,7 +115,6 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
     const [showExpiredIncidents, setShowExpiredIncidents] = useState(false);
 
     const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
-    const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
     const { isOpen: isResolveOpen, onOpen: onResolveOpen, onClose: onResolveClose } = useDisclosure();
 
     const toast = useToast();
@@ -138,7 +135,7 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
 
         // Filtre par statut
         if (statusFilter !== 'all') {
-            result = result.filter(incident => incident.status === statusFilter);
+            result = result.filter(incident => incident.active === (statusFilter === 'active'));
         }
 
         // Filtre par type d'incident
@@ -164,7 +161,6 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
         setFilteredIncidents(result);
     }, [searchTerm, statusFilter, typeFilter, severityFilter, showExpiredIncidents, incidents]);
 
-    // Formatage de la date
     const formatDate = (dateString?: string) => {
         if (!dateString) return 'N/A';
 
@@ -177,236 +173,149 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
             minute: '2-digit'
         }).format(date);
     };
-
-    // Déterminer la couleur du badge de statut
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: boolean) => {
         switch (status) {
-            case 'active':
+            case true:
                 return 'orange';
-            case 'resolved':
+            case false:
                 return 'green';
-            case 'pending':
-                return 'yellow';
             default:
                 return 'gray';
         }
     };
 
-    // Déterminer la couleur du badge de sévérité
     const getSeverityColor = (severity: string) => {
         switch (severity) {
-            case 'critical':
-                return 'red';
-            case 'high':
-                return 'orange';
-            case 'medium':
-                return 'yellow';
             case 'low':
                 return 'green';
+            case 'moderate':
+                return 'yellow';
+            case 'high':
+                return 'orange';
+            case 'severe':
+                return 'red';
             default:
                 return 'gray';
         }
     };
 
-    // Obtenir l'icône pour le type d'incident
     const getIncidentTypeIcon = (type: string) => {
         switch (type.toLowerCase()) {
             case 'accident':
                 return FaCarCrash;
-            case 'travaux':
-                return FaTools;
-            case 'route bloquée':
-                return FaRoad;
-            case 'conditions météo':
-                return FaSnowflake;
-            case 'embouteillage':
-                return FaTrafficLight;
+            case 'roadworks':
+                return FaHammer;
+            case 'roadClosed':
+                return FaRoadBarrier;
+            case 'congestion':
+                return FaCar;
+            case 'hazard':
+                return FaExclamationTriangle;
+            case 'police':
+                return FaExclamationCircle;
             default:
                 return FaExclamationTriangle;
         }
     };
 
-    // Traduire le statut en français
-    const translateStatus = (status: string) => {
+    const translateStatus = (status: boolean) => {
         switch (status) {
-            case 'active':
+            case true:
                 return 'Actif';
-            case 'resolved':
+            case false:
                 return 'Résolu';
-            case 'pending':
-                return 'En attente';
             default:
                 return status;
         }
     };
 
-    // Traduire la sévérité en français
     const translateSeverity = (severity: string) => {
         switch (severity) {
-            case 'critical':
-                return 'Critique';
-            case 'high':
-                return 'Élevée';
-            case 'medium':
-                return 'Moyenne';
             case 'low':
                 return 'Faible';
+            case 'moderate':
+                return 'Moyenne';
+            case 'high':
+                return 'Élevée';
+            case 'severe':
+                return 'Sévère';
             default:
-                return severity;
+                return 'Inconnue';
         }
     };
 
-    // Ouvrir le modal de détails
+
+    const renderType = (type : string) => {
+        switch (type) {
+            case 'accident':
+                return 'Accident';
+            case 'roadworks':
+                return 'Travaux';
+            case 'roadClosed':
+                return 'Route fermée';
+            case 'hazard':
+                return 'Obstacle';
+            case 'congestion':
+                return 'Embouteillage';
+            case 'flood':
+                return 'Inondation';
+            case 'police':
+                return 'Contrôle de police';
+            default:
+                return 'Autre';
+        }
+    }
+
     const handleViewDetails = (incident: Incident) => {
         setSelectedIncident(incident);
         onDetailOpen();
     };
 
-    // Ouvrir le modal de suppression
-    const handleDeleteIncident = (incident: Incident) => {
-        setSelectedIncident(incident);
-        onDeleteOpen();
-    };
-
-    // Ouvrir le modal de résolution
     const handleResolveIncident = (incident: Incident) => {
         setSelectedIncident(incident);
         onResolveOpen();
     };
 
-    // Voir sur la carte
     const handleViewOnMap = (incident: Incident) => {
-        // Rediriger vers la page de carte avec l'incident sélectionné
         router.push(`/map?incident=${incident.id}`);
     };
 
-    // Valider un incident
-    const handleValidateIncident = async (incident: Incident) => {
-        setLoading(true);
-        try {
-            // Ici, vous implémenterez l'appel API réel pour valider l'incident
-            // Exemple fictif:
-            // await api.traffic.validateIncidentReport(incident.id);
-
-            // Simuler un délai
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Mettre à jour l'incident dans la liste
-            const updatedIncidents = incidents.map(item => {
-                if (item.id === incident.id) {
-                    return {
-                        ...item,
-                        validationCount: item.validationCount + 1,
-                        isVerified: true
-                    };
-                }
-                return item;
-            });
-
-            setIncidents(updatedIncidents);
-
-            toast({
-                title: "Incident validé",
-                description: `L'incident a été validé avec succès.`,
-                status: "success",
-                duration: 5000,
-                isClosable: true,
-            });
-        } catch (error) {
-            console.error('Erreur lors de la validation de l\'incident:', error);
-            toast({
-                title: "Erreur",
-                description: "Une erreur est survenue lors de la validation de l'incident.",
-                status: "error",
-                duration: 5000,
-                isClosable: true,
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Invalider un incident
-    const handleInvalidateIncident = async (incident: Incident) => {
-        setLoading(true);
-        try {
-            // Ici, vous implémenterez l'appel API réel pour invalider l'incident
-            // Exemple fictif:
-            // await api.traffic.invalidateIncidentReport(incident.id);
-
-            // Simuler un délai
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Mettre à jour l'incident dans la liste
-            const updatedIncidents = incidents.map(item => {
-                if (item.id === incident.id) {
-                    return {
-                        ...item,
-                        invalidationCount: item.invalidationCount + 1
-                    };
-                }
-                return item;
-            });
-
-            setIncidents(updatedIncidents);
-
-            toast({
-                title: "Incident invalidé",
-                description: `L'incident a été invalidé avec succès.`,
-                status: "success",
-                duration: 5000,
-                isClosable: true,
-            });
-        } catch (error) {
-            console.error('Erreur lors de l\'invalidation de l\'incident:', error);
-            toast({
-                title: "Erreur",
-                description: "Une erreur est survenue lors de l'invalidation de l'incident.",
-                status: "error",
-                duration: 5000,
-                isClosable: true,
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Confirmer la résolution de l'incident
     const handleConfirmResolve = async () => {
         if (!selectedIncident) return;
 
         setLoading(true);
         try {
-            // Ici, vous implémenterez l'appel API réel pour résoudre l'incident
-            // Exemple fictif:
-            // await api.traffic.resolveIncident(selectedIncident.id);
+            if (!selectedIncident) {
+                toast({
+                    title: "Erreur",
+                    description: "Cet incident est déjà marqué comme résolu.",
+                    status: "warning",
+                    duration: 5000,
+                    isClosable: true,
+                });
+                return;
+            } else {
+                const res = await api.traffic.resolveTrafficIncident(selectedIncident.id);
 
-            // Simuler un délai
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            //
-            // // Mettre à jour l'incident dans la liste
-            // const updatedIncidents = incidents.map(incident => {
-            //     if (incident.id === selectedIncident.id) {
-            //         return {
-            //             ...incident,
-            //             status: 'resolved',
-            //             updatedAt: new Date().toISOString()
-            //         };
-            //     }
-            //     return incident;
-            // });
-            //
-            // setIncidents(updatedIncidents);
+                const updatedIncidents = incidents.map(incident => {
+                    if (incident.id === selectedIncident.id) {
+                        return { ...incident, active: false };
+                    }
+                    return incident;
+                });
 
-            toast({
-                title: "Incident résolu",
-                description: `L'incident a été marqué comme résolu.`,
-                status: "success",
-                duration: 5000,
-                isClosable: true,
-            });
+                setIncidents(updatedIncidents);
 
-            onResolveClose();
+                toast({
+                    title: "Incident résolu",
+                    description: `L'incident a été marqué comme résolu.`,
+                    status: "success",
+                    duration: 5000,
+                    isClosable: true,
+                });
+
+                onResolveClose();
+            }
         } catch (error) {
             console.error('Erreur lors de la résolution de l\'incident:', error);
             toast({
@@ -421,56 +330,14 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
         }
     };
 
-    // Confirmer la suppression de l'incident
-    const handleConfirmDelete = async () => {
-        if (!selectedIncident) return;
-
-        setLoading(true);
-        try {
-            // Ici, vous implémenterez l'appel API réel pour supprimer l'incident
-            // Exemple fictif:
-            // await api.traffic.deleteIncident(selectedIncident.id);
-
-            // Simuler un délai
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Supprimer l'incident de la liste
-            const updatedIncidents = incidents.filter(incident => incident.id !== selectedIncident.id);
-            setIncidents(updatedIncidents);
-
-            toast({
-                title: "Incident supprimé",
-                description: `L'incident a été supprimé avec succès.`,
-                status: "success",
-                duration: 5000,
-                isClosable: true,
-            });
-
-            onDeleteClose();
-        } catch (error) {
-            console.error('Erreur lors de la suppression de l\'incident:', error);
-            toast({
-                title: "Erreur",
-                description: "Une erreur est survenue lors de la suppression de l'incident.",
-                status: "error",
-                duration: 5000,
-                isClosable: true,
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Obtenir les statistiques des incidents
     const getIncidentStats = () => {
         const total = incidents.length;
-        const active = incidents.filter(incident => incident.status === 'active').length;
-        const resolved = incidents.filter(incident => incident.status === 'resolved').length;
-        const pending = incidents.filter(incident => incident.status === 'pending').length;
+        const active = incidents.filter(incident => incident.active).length;
+        const resolved = incidents.filter(incident => !incident.active).length;
 
-        const critical = incidents.filter(incident => incident.severity === 'critical').length;
+        const critical = incidents.filter(incident => incident.severity === 'severe').length;
         const high = incidents.filter(incident => incident.severity === 'high').length;
-        const medium = incidents.filter(incident => incident.severity === 'medium').length;
+        const medium = incidents.filter(incident => incident.severity === 'moderate').length;
         const low = incidents.filter(incident => incident.severity === 'low').length;
 
         // @ts-ignore
@@ -485,7 +352,6 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
             total,
             active,
             resolved,
-            pending,
             critical,
             high,
             medium,
@@ -645,11 +511,12 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                             variant="filled"
                         >
                             <option value="all">Tous les types</option>
-                            <option value="Accident">Accident</option>
-                            <option value="Travaux">Travaux</option>
-                            <option value="Route bloquée">Route bloquée</option>
-                            <option value="Conditions météo">Conditions météo</option>
-                            <option value="Embouteillage">Embouteillage</option>
+                            <option value="accident">Accident</option>
+                            <option value="roadworks">Travaux</option>
+                            <option value="roadClosed">Route fermée</option>
+                            <option value="hazard">Conditions météo</option>
+                            <option value="police">Controle policier</option>
+                            <option value="congestion">Embouteillage</option>
                         </Select>
 
                         <Select
@@ -660,9 +527,9 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                             variant="filled"
                         >
                             <option value="all">Toutes</option>
-                            <option value="critical">Critique</option>
+                            <option value="severe">Critique</option>
                             <option value="high">Élevée</option>
-                            <option value="medium">Moyenne</option>
+                            <option value="moderate">Moyenne</option>
                             <option value="low">Faible</option>
                         </Select>
 
@@ -718,7 +585,7 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                                             color={getSeverityColor(incident.severity) + '.500'}
                                                             mr={2}
                                                         />
-                                                        {incident.incidentType}
+                                                        {renderType(incident.incidentType)}
                                                     </Flex>
                                                 </Td>
                                                 <Td>
@@ -730,8 +597,8 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                                     </Badge>
                                                 </Td>
                                                 <Td>
-                                                    <Badge colorScheme={getStatusColor(incident.status)}>
-                                                        {translateStatus(incident.status)}
+                                                    <Badge colorScheme={getStatusColor(incident.active)}>
+                                                        {translateStatus(incident.active)}
                                                     </Badge>
                                                 </Td>
                                                 <Td>
@@ -743,10 +610,10 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                                 <Td>
                                                     <HStack spacing={1}>
                                                         <Tag size="sm" colorScheme="green" variant="outline">
-                                                            +{incident.validationCount}
+                                                            +{incident.validations}
                                                         </Tag>
                                                         <Tag size="sm" colorScheme="red" variant="outline">
-                                                            -{incident.invalidationCount}
+                                                            -{incident.invalidations}
                                                         </Tag>
                                                     </HStack>
                                                 </Td>
@@ -766,14 +633,11 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                                             <MenuItem icon={<FiMap />} onClick={() => handleViewOnMap(incident)}>
                                                                 Voir sur la carte
                                                             </MenuItem>
-                                                            {incident.status !== 'resolved' && (
+                                                            {incident.active && (
                                                                 <MenuItem icon={<FiCheckCircle />} onClick={() => handleResolveIncident(incident)}>
                                                                     Marquer comme résolu
                                                                 </MenuItem>
                                                             )}
-                                                            <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => handleDeleteIncident(incident)}>
-                                                                Supprimer
-                                                            </MenuItem>
                                                         </MenuList>
                                                     </Menu>
                                                 </Td>
@@ -819,18 +683,12 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                             color={getSeverityColor(selectedIncident.severity) + '.500'}
                                         />
                                         <Box>
-                                            <Heading size="md">{selectedIncident.incidentType}</Heading>
+                                            <Heading size="md">{renderType(selectedIncident.incidentType)}</Heading>
                                             <Text color="gray.500" fontSize="sm">{selectedIncident.description}</Text>
                                         </Box>
                                     </Flex>
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={6}>
-                                        <Box p={3} borderWidth="1px" borderRadius="md">
-                                            <Text fontWeight="medium" mb={1}>Coordonnées</Text>
-                                            <Text fontSize="sm" fontFamily="monospace">
-                                                {selectedIncident.coordinates.join(', ')}
-                                            </Text>
-                                        </Box>
 
                                         <Box p={3} borderWidth="1px" borderRadius="md">
                                             <Text fontWeight="medium" mb={1}>Signalé par</Text>
@@ -866,7 +724,7 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                         <Heading size="sm" mb={2}>Validation communautaire</Heading>
                                         <Flex align="center" justify="space-between" mb={2}>
                                             <Text>
-                                                Confiance: {Math.max(0, selectedIncident.validationCount - selectedIncident.invalidationCount)} point{selectedIncident.validationCount - selectedIncident.invalidationCount !== 1 ? 's' : ''}
+                                                Confiance: {Math.max(0, selectedIncident.validations - selectedIncident.invalidations)} point{selectedIncident.validations - selectedIncident.invalidations !== 1 ? 's' : ''}
                                             </Text>
                                             <Badge colorScheme={selectedIncident.isVerified ? "green" : "yellow"}>
                                                 {selectedIncident.isVerified ? "Vérifié" : "Non vérifié"}
@@ -875,65 +733,33 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                         <Flex align="center" mb={2}>
                                             <Box flex="1">
                                                 <Progress
-                                                    value={(selectedIncident.validationCount / (selectedIncident.validationCount + selectedIncident.invalidationCount || 1)) * 100}
+                                                    value={(selectedIncident.validations / (selectedIncident.validations + selectedIncident.invalidations || 1)) * 100}
                                                     colorScheme="green"
                                                     borderRadius="full"
                                                     height="8px"
                                                 />
                                             </Box>
                                             <Text ml={2} fontWeight="bold">
-                                                {(selectedIncident.validationCount / (selectedIncident.validationCount + selectedIncident.invalidationCount || 1) * 100).toFixed(0)}%
+                                                {(selectedIncident.validations / (selectedIncident.validations + selectedIncident.invalidations || 1) * 100).toFixed(0)}%
                                             </Text>
                                         </Flex>
                                         <HStack spacing={4} mt={4}>
                                             <Stat size="sm">
                                                 <StatLabel fontSize="xs">Validations</StatLabel>
-                                                <StatNumber color="green.500">{selectedIncident.validationCount}</StatNumber>
+                                                <StatNumber color="green.500">{selectedIncident.validations}</StatNumber>
                                             </Stat>
                                             <Stat size="sm">
                                                 <StatLabel fontSize="xs">Invalidations</StatLabel>
-                                                <StatNumber color="red.500">{selectedIncident.invalidationCount}</StatNumber>
+                                                <StatNumber color="red.500">{selectedIncident.invalidations}</StatNumber>
                                             </Stat>
                                         </HStack>
-                                    </Box>
-
-                                    {/* Placeholder pour la carte d'incident */}
-                                    <Box
-                                        position="relative"
-                                        borderRadius="md"
-                                        overflow="hidden"
-                                        h="200px"
-                                        w="100%"
-                                        bg={useColorModeValue('gray.100', 'gray.700')}
-                                        mb={4}
-                                    >
-                                        <Center h="100%" w="100%" color={useColorModeValue('gray.500', 'gray.400')}>
-                                            <Icon as={FiMap} boxSize={10} />
-                                            <Text ml={2}>Carte de l'incident</Text>
-                                        </Center>
-                                        <Box
-                                            position="absolute"
-                                            bottom={2}
-                                            right={2}
-                                            bg="white"
-                                            p={2}
-                                            borderRadius="md"
-                                            boxShadow="md"
-                                            fontSize="sm"
-                                            color="gray.700"
-                                        >
-                                            <HStack spacing={2}>
-                                                <Icon as={FaMapMarkerAlt} color="red.500" />
-                                                <Text>{selectedIncident.coordinates.join(', ')}</Text>
-                                            </HStack>
-                                        </Box>
                                     </Box>
                                 </Box>
                             )}
                         </ModalBody>
                         <ModalFooter>
                             <HStack spacing={2}>
-                                {selectedIncident && selectedIncident.status !== 'resolved' && (
+                                {selectedIncident && selectedIncident.active && (
                                     <Button
                                         leftIcon={<FiCheckCircle />}
                                         colorScheme="green"
@@ -971,7 +797,7 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                         <ModalCloseButton />
                         <ModalBody pb={6}>
                             <Text>
-                                Êtes-vous sûr de vouloir marquer l'incident <b>{selectedIncident?.incidentType}</b> comme résolu ?
+                                Êtes-vous sûr de vouloir marquer l'incident <b>{renderType(selectedIncident?.incidentType ? selectedIncident.incidentType: "")}</b> comme résolu ?
                             </Text>
                             <Text mt={2} fontSize="sm" color="gray.500">
                                 Cette action informera les utilisateurs que l'incident n'est plus actif.
@@ -986,31 +812,6 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                 isLoading={loading}
                             >
                                 Confirmer la résolution
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
-
-                {/* Modal de confirmation de suppression */}
-                <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} isCentered size="md">
-                    <ModalOverlay />
-                    <ModalContent>
-                        <ModalHeader color="red.500">Supprimer l'incident</ModalHeader>
-                        <ModalCloseButton />
-                        <ModalBody pb={6}>
-                            <Text>
-                                Êtes-vous sûr de vouloir supprimer l'incident <b>{selectedIncident?.incidentType}</b> ?
-                                Cette action est irréversible.
-                            </Text>
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button mr={3} onClick={onDeleteClose}>Annuler</Button>
-                            <Button
-                                colorScheme="red"
-                                onClick={handleConfirmDelete}
-                                isLoading={loading}
-                            >
-                                Supprimer
                             </Button>
                         </ModalFooter>
                     </ModalContent>
@@ -1041,86 +842,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Pour l'exemple, utilisons des données simulées
-        // Dans un cas réel, vous feriez un appel API pour récupérer les incidents
-        // const incidentsResponse = await axios.get(`${process.env.API_URL}/api/admin/traffic/reports`, config);
-        // const incidents = incidentsResponse.data.data.incidents;
+        const incidentsResponse = await axios.get(
+            `${process.env.API_URL}/api/navigation/traffic/reports`,
+            config
+        );
 
-        // Exemple de données fictives
-        const incidents: Incident[] = [
-            {
-                id: 201,
-                incidentType: "Accident",
-                description: "Collision entre deux véhicules",
-                coordinates: [49.1829, -0.3707],
-                severity: "high",
-                status: "active",
-                userId: 1,
-                username: "Jules Martin",
-                createdAt: "2025-05-05T16:30:00Z",
-                validationCount: 8,
-                invalidationCount: 1,
-                isVerified: true
-            },
-            {
-                id: 202,
-                incidentType: "Travaux",
-                description: "Réduction à une voie",
-                coordinates: [49.2764, -0.7024],
-                severity: "medium",
-                status: "active",
-                userId: 2,
-                username: "Marie Dubois",
-                createdAt: "2025-05-04T11:45:00Z",
-                expiresAt: "2025-05-15T23:59:59Z",
-                validationCount: 5,
-                invalidationCount: 0,
-                isVerified: true
-            },
-            {
-                id: 203,
-                incidentType: "Route bloquée",
-                description: "Arbre tombé sur la chaussée",
-                coordinates: [49.3539, 0.0630],
-                severity: "critical",
-                status: "resolved",
-                userId: 3,
-                username: "Thomas Bernard",
-                createdAt: "2025-05-03T14:20:00Z",
-                updatedAt: "2025-05-03T16:45:00Z",
-                validationCount: 12,
-                invalidationCount: 0,
-                isVerified: true
-            },
-            {
-                id: 204,
-                incidentType: "Embouteillage",
-                description: "Trafic dense",
-                coordinates: [49.4431, 1.0989],
-                severity: "low",
-                status: "active",
-                userId: 4,
-                username: "Sophie Leroy",
-                createdAt: "2025-05-03T17:15:00Z",
-                validationCount: 3,
-                invalidationCount: 2,
-                isVerified: false
-            },
-            {
-                id: 205,
-                incidentType: "Conditions météo",
-                description: "Route glissante après la pluie",
-                coordinates: [49.6337, -1.6221],
-                severity: "medium",
-                status: "pending",
-                userId: 1,
-                username: "Jules Martin",
-                createdAt: "2025-05-02T09:10:00Z",
-                validationCount: 1,
-                invalidationCount: 1,
-                isVerified: false
-            }
-        ];
+        console.log('incidentsResponse', incidentsResponse.data.data.incidents);
+
+        const incidents: Incident[] = incidentsResponse.data.data.incidents
 
         return {
             props: {

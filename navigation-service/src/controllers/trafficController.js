@@ -218,6 +218,37 @@ exports.reportTrafficIncident = async (req, res, next) => {
 };
 
 /**
+ * Résolut un incident de trafic
+ * @route GET /api/traffic/resolve/:id
+ */
+exports.resolveTrafficIncident = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const incident = await Incident.findByPk(id);
+
+        if (!incident) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Incident non trouvé'
+            });
+        }
+
+        incident.active = false;
+        await incident.save();
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                incident
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
  * Récupère les signalements d'incidents créés par les utilisateurs
  * @route GET /api/traffic/reports
  */

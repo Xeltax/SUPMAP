@@ -221,6 +221,11 @@ const api = {
             return response.data;
         },
 
+        resolveTrafficIncident : async (id: string): Promise<ApiResponse<{ incident: any }>> => {
+            const response = await apiClient.patch<ApiResponse<{ incident: any }>>(`/api/navigation/traffic/resolve/${id}`);
+            return response.data;
+        },
+
         validateIncidentReport: async (id: string): Promise<ApiResponse<{ incident: any }>> => {
             const response = await apiClient.post<ApiResponse<{ incident: any }>>(`/api/navigation/traffic/validate/${id}`);
             return response.data;

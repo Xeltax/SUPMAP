@@ -268,6 +268,35 @@ exports.getAllUsers = async (req, res, next) => {
 }
 
 /**
+ * Récupérer un utilisateurs pas son id pour l'administration
+ * @route GET /api/auth/getAll
+ * Note: Cette route est protégée par le middleware d'authentification et doit être accessible uniquement aux administrateurs
+ */
+exports.getUserById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const user = await User.findById(id).select('-password');
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Utilisateur non trouvé'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                user
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
  * Modifier un utilisateur par l'administrateur
  * @route PATCH /api/auth/users/:id
  * Note: Cette route est protégée par le middleware d'authentification et doit être accessible uniquement aux administrateurs

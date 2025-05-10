@@ -4,22 +4,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const rateLimit = require('express-rate-limit');
-const winston = require('winston');
-
-// Configuration du logger
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({ filename: 'error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'combined.log' })
-    ]
-});
 
 // Initialiser l'application Express
 const app = express();

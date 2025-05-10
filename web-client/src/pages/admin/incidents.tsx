@@ -164,7 +164,7 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
         setFilteredIncidents(result);
     }, [searchTerm, statusFilter, typeFilter, severityFilter, showExpiredIncidents, incidents]);
 
-    // Update displayed incidents when filtered incidents change
+    // Mettre à jour les incidents affichés lorsque les incidents filtrés changent
     useEffect(() => {
         setDisplayedIncidents(filteredIncidents.slice(0, displayCount));
     }, [filteredIncidents, displayCount]);
@@ -876,7 +876,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const incidents = incidentsResponse.data.data.incidents;
         const users = usersResponse.data.data.users;
 
-        // Add username to each incident
+        // Ajouter le nom d'utilisateur à chaque incident
         const incidentsWithUsers = incidents.map((incident: any) => {
             const user = users.find((u: any) => u.id === incident.userId);
             return {

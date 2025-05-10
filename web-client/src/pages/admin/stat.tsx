@@ -1319,7 +1319,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         // Generate monthly data from existing data
         const now = new Date();
-        const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1); // Last 12 months
+        const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1); // 12 derniers mois
         const monthlyData = Array.from({ length: 12 }, (_, i) => {
             const month = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
             const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);

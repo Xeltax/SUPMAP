@@ -151,7 +151,7 @@ async function insertTrafficIncidents(incidents) {
                     active: incident.properties.active,
                     description: incident.properties.events[0]?.description || '',
                     severity: mappedSeverity,
-                    expiresAt: incident.properties.endTime || new Date(Date.now() + 3600000) // Default to 24 hours if no end time provided
+                    expiresAt: incident.properties.endTime || new Date(Date.now() + 3600000) // Par défaut 24 heures si aucune heure de fin n'est fournie
                 });
             }
         }

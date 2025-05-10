@@ -6,7 +6,6 @@ import { RouteOptions } from '../../components/RouteOptions';
 import { useNavigation as useExpoNavigation } from 'expo-router';
 import { useNavigation } from '../../contexts/NavigationContext';
 import * as Location from 'expo-location';
-// StatusBar est maintenant gérée globalement dans _layout.tsx
 import { Map } from '../../components/Map';
 import { Ionicons } from '@expo/vector-icons';
 import { IncidentForm } from '../../components/IncidentForm';
@@ -14,7 +13,6 @@ import { ToastProvider } from '../../components/Toast';
 import { useLocalSearchParams } from 'expo-router';
 import { LocationObject } from 'expo-location';
 
-// Fonction pour formater la distance
 const formatDistance = (meters: number) => {
   if (meters < 1000) {
     return `${Math.round(meters)} m`;
@@ -24,7 +22,6 @@ const formatDistance = (meters: number) => {
   }
 };
 
-// Fonction pour formater le temps
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) {
@@ -56,14 +53,13 @@ export default function MapScreen() {
   const [userHeading, setUserHeading] = useState<number | null>(null);
   const [userSpeed, setUserSpeed] = useState<number | null>(null);
   const [minimizedNav, setMinimizedNav] = useState(false);
-  const [mapKey, setMapKey] = useState(0); // Used to force map re-render when route changes
+  const [mapKey, setMapKey] = useState(0);
   const [incidentFormVisible, setIncidentFormVisible] = useState(false);
   const [navigationMode, setNavigationMode] = useState<'overview' | 'navigation'>('overview');
   const locationSubscription = useRef<any>(null);
   const mapZoomLevel = useRef<number>(15);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Request location permissions and start location tracking
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -73,7 +69,6 @@ export default function MapScreen() {
       }
 
       try {
-        // Get initial location
         const location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.BestForNavigation
         });
@@ -85,7 +80,6 @@ export default function MapScreen() {
         setUserHeading(location.coords.heading || 0);
         setUserSpeed(location.coords.speed || 0);
         
-        // Start watching position with high accuracy for navigation
         if (locationSubscription.current) {
           locationSubscription.current.remove();
         }
@@ -93,8 +87,8 @@ export default function MapScreen() {
         locationSubscription.current = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            distanceInterval: 5, // Update every 5 meters
-            timeInterval: 1000, // Or at least every second
+            distanceInterval: 5,
+            timeInterval: 1000,
           },
           (location: LocationObject) => {
             setUserLocation({
@@ -104,21 +98,17 @@ export default function MapScreen() {
             setUserHeading(location.coords.heading || 0);
             setUserSpeed(location.coords.speed || 0);
             
-            // Adjust zoom level based on speed
             if (location.coords.speed !== null) {
-              // Speed is in m/s, we adjust zoom level accordingly
-              // Lower speed = higher zoom level (more detail)
-              if (location.coords.speed < 5) { // Walking or very slow
-                mapZoomLevel.current = 19.5; // Zoom très élevé pour la marche
-              } else if (location.coords.speed < 14) { // Urban driving
-                mapZoomLevel.current = 18.5; // Zoom élevé pour la conduite urbaine
-              } else if (location.coords.speed < 25) { // Suburban
-                mapZoomLevel.current = 17.5; // Zoom moyen pour la conduite suburbaine
-              } else { // Highway
-                mapZoomLevel.current = 16.5; // Zoom plus faible pour l'autoroute
+              if (location.coords.speed < 5) {
+                mapZoomLevel.current = 19.5;
+              } else if (location.coords.speed < 14) {
+                mapZoomLevel.current = 18.5;
+              } else if (location.coords.speed < 25) {
+                mapZoomLevel.current = 17.5;
+              } else {
+                mapZoomLevel.current = 16.5;
               }
             } else {
-              // Valeur par défaut si la vitesse n'est pas disponible
               mapZoomLevel.current = 18.5;
             }
           }
@@ -128,7 +118,6 @@ export default function MapScreen() {
       }
     })();
     
-    // Cleanup subscription on unmount
     return () => {
       if (locationSubscription.current) {
         locationSubscription.current.remove();
@@ -136,12 +125,10 @@ export default function MapScreen() {
     };
   }, []);
 
-  // Force map re-render when route changes
   useEffect(() => {
     if (currentRoute) {
       setMapKey(prev => prev + 1);
       
-      // When a route is confirmed, show animation to navigation mode
       if (isNavigating && !routeOptions) {
         setNavigationMode('navigation');
         Animated.timing(fadeAnim, {
@@ -156,15 +143,12 @@ export default function MapScreen() {
     }
   }, [currentRoute, isNavigating, routeOptions]);
 
-  // Vérifier s'il faut ouvrir la modale de signalement d'incident automatiquement
   useEffect(() => {
     if (params.showIncidentForm === 'true') {
       setIncidentFormVisible(true);
     }
   }, [params.showIncidentForm]);
 
-  // Convert route data for the Map component
-  // Coordonnées de l'itinéraire principal
   const routeCoordinates = useMemo(() => {
     if (!currentRoute || !currentRoute.legs) return [];
     
@@ -176,12 +160,11 @@ export default function MapScreen() {
     );
   }, [currentRoute]);
   
-  // Préparer les itinéraires alternatifs pour l'affichage
   const alternativeRoutes = useMemo(() => {
     if (!availableRoutes || availableRoutes.length <= 1) return [];
     
     return availableRoutes.map((route, index) => {
-      // Extraire les coordonnées de l'itinéraire
+      
       const coordinates = route.legs?.flatMap(leg => 
         leg.points.map(point => ({
           latitude: point.latitude,
@@ -196,7 +179,6 @@ export default function MapScreen() {
     });
   }, [availableRoutes, selectedRouteIndex]);
 
-  // Format origin and destination for the Map
   const origin = useMemo(() => {
     if (!originLocation) return null;
     return { 
@@ -293,7 +275,7 @@ export default function MapScreen() {
               </View>
             )}
             
-            {/* Informations de navigation résumées (toujours visibles en mode navigation) */}
+            {/* Informations de navigation résumées */}
             {navigationMode === 'navigation' && (
               <View style={styles.navigationSummaryBar}>
                 <View style={styles.navigationSummaryItem}>
@@ -427,14 +409,14 @@ const styles = StyleSheet.create({
   },
   incidentButton: {
     position: 'absolute',
-    top: 80,
-    right: 20,
+    top: Platform.OS === 'ios' ? 50 : 30,
+    left: 25,
     backgroundColor: '#ff5722',
     borderRadius: 30,
     padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 30,
+    zIndex: 999,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,

@@ -195,10 +195,10 @@ export const Map: React.FC<MapProps> = ({
             latitude: origin?.latitude || 48.866667,
             longitude: origin?.longitude || 2.333333,
           },
-          pitch: 75, // Angle d'inclinaison plus élevé pour une vue 3D plus immersive
-          heading: heading, // Orientation de la carte selon la direction
-          altitude: 300, // Hauteur de la caméra réduite pour un zoom plus proche
-          zoom: zoomLevel, // Niveau de zoom dynamique
+          pitch: 75,
+          heading: heading,
+          altitude: 300,
+          zoom: zoomLevel,
         } : undefined}
       >
         {/* OpenStreetMap tiles */}
@@ -283,6 +283,11 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+    height: '115%',
+    width: '115%',
+    marginLeft: -5,
+    marginRight: -5,
+    marginBottom: -30,
   },
   alternativeRoute: {
     opacity: 0.6,

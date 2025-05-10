@@ -91,6 +91,12 @@ Route.init(
             type: DataTypes.DATE,
             allowNull: true,
             comment: 'Date de dernière utilisation de l\'itinéraire'
+        },
+        usageCount: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+            comment: 'Nombre de fois que l\'itinéraire a été utilisé'
         }
     },
     {
@@ -104,6 +110,9 @@ Route.init(
             },
             {
                 fields: ['isFavorite']
+            },
+            {
+                fields: ['usageCount']
             }
         ]
     }

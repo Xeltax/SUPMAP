@@ -19,6 +19,7 @@ import {
     Center,
     Grid,
     GridItem,
+    Button,
 } from '@chakra-ui/react';
 import { FiUsers, FiUser, FiCalendar } from 'react-icons/fi';
 import { FaRoute, FaExclamationTriangle } from 'react-icons/fa';
@@ -52,6 +53,15 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
     const [stats, setStats] = useState<AdminDashboardStats>(initialStats);
     const [recentData, setRecentData] = useState<RecentData>(initialRecentData);
     const [loading, setLoading] = useState(false);
+    const [displayCount, setDisplayCount] = useState<{
+        users: number;
+        routes: number;
+        incidents: number;
+    }>({
+        users: 100,
+        routes: 100,
+        incidents: 100
+    });
 
     // Couleurs pour le mode clair/sombre
     const cardBg = useColorModeValue('white', 'gray.800');
@@ -92,6 +102,13 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
                 return 'Autre';
         }
     }
+
+    const handleLoadMore = (type: 'users' | 'routes' | 'incidents') => {
+        setDisplayCount(prev => ({
+            ...prev,
+            [type]: prev[type] + 100
+        }));
+    };
 
     return (
         <AdminLayout>
@@ -182,31 +199,38 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
                                 <Card bg={cardBg} boxShadow="md" h="100%">
                                     <CardBody>
                                         <Heading size="md" mb={4}>Utilisateurs récents</Heading>
-                                        {recentData.recentUsers.length > 0 ? (
-                                            recentData.recentUsers.map((user, index) => (
-                                                <Box
-                                                    key={user.id || index}
-                                                    p={3}
-                                                    mb={2}
-                                                    borderWidth="1px"
-                                                    borderRadius="md"
-                                                    _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
-                                                >
-                                                    <Flex justify="space-between">
-                                                        <Flex align="center">
-                                                            <Icon as={FiUser} mr={2} color="green.500" />
-                                                            <Text fontWeight="medium">{user.username}</Text>
-                                                            <Text fontSize="sm" ml={2} color="gray.500">{user.email}</Text>
-                                                        </Flex>
-                                                        <Flex align="center">
-                                                            <Icon as={FiCalendar} mr={1} color="gray.500" />
-                                                            <Text fontSize="xs">{formatDate(user.createdAt)}</Text>
-                                                        </Flex>
+                                        {recentData.recentUsers.slice(0, displayCount.users).map((user, index) => (
+                                            <Box
+                                                key={user.id || index}
+                                                p={3}
+                                                mb={2}
+                                                borderWidth="1px"
+                                                borderRadius="md"
+                                                _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
+                                            >
+                                                <Flex justify="space-between">
+                                                    <Flex align="center">
+                                                        <Icon as={FiUser} mr={2} color="green.500" />
+                                                        <Text fontWeight="medium">{user.username}</Text>
+                                                        <Text fontSize="sm" ml={2} color="gray.500">{user.email}</Text>
                                                     </Flex>
-                                                </Box>
-                                            ))
-                                        ) : (
-                                            <Text color="gray.500">Aucun utilisateur récent</Text>
+                                                    <Flex align="center">
+                                                        <Icon as={FiCalendar} mr={1} color="gray.500" />
+                                                        <Text fontSize="xs">{formatDate(user.createdAt)}</Text>
+                                                    </Flex>
+                                                </Flex>
+                                            </Box>
+                                        ))}
+                                        {recentData.recentUsers.length > displayCount.users && (
+                                            <Button
+                                                mt={4}
+                                                w="full"
+                                                onClick={() => handleLoadMore('users')}
+                                                colorScheme="blue"
+                                                variant="outline"
+                                            >
+                                                Charger plus d'utilisateurs
+                                            </Button>
                                         )}
                                     </CardBody>
                                 </Card>
@@ -217,34 +241,41 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
                                 <Card bg={cardBg} boxShadow="md" h="100%">
                                     <CardBody>
                                         <Heading size="md" mb={4}>Itinéraires récents</Heading>
-                                        {recentData.recentRoutes.length > 0 ? (
-                                            recentData.recentRoutes.map((route, index) => (
-                                                <Box
-                                                    key={route.id || index}
-                                                    p={3}
-                                                    mb={2}
-                                                    borderWidth="1px"
-                                                    borderRadius="md"
-                                                    _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
-                                                >
-                                                    <Flex justify="space-between">
-                                                        <Text fontWeight="medium">{route.name}</Text>
-                                                        <Text fontSize="sm" color="purple.500">
-                                                            {Math.round(route.distance/1000)} km
-                                                        </Text>
-                                                    </Flex>
-                                                    <Flex justify="space-between" mt={1}>
-                                                        <Text fontSize="xs" color="gray.500">
-                                                            {route.originName} → {route.destinationName}
-                                                        </Text>
-                                                        <Text fontSize="xs" color="gray.500">
-                                                            Créé : {formatDate(route.createdAt)}
-                                                        </Text>
-                                                    </Flex>
-                                                </Box>
-                                            ))
-                                        ) : (
-                                            <Text color="gray.500">Aucun itinéraire récent</Text>
+                                        {recentData.recentRoutes.slice(0, displayCount.routes).map((route, index) => (
+                                            <Box
+                                                key={route.id || index}
+                                                p={3}
+                                                mb={2}
+                                                borderWidth="1px"
+                                                borderRadius="md"
+                                                _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
+                                            >
+                                                <Flex justify="space-between">
+                                                    <Text fontWeight="medium">{route.name}</Text>
+                                                    <Text fontSize="sm" color="purple.500">
+                                                        {Math.round(route.distance/1000)} km
+                                                    </Text>
+                                                </Flex>
+                                                <Flex justify="space-between" mt={1}>
+                                                    <Text fontSize="xs" color="gray.500">
+                                                        {route.originName} → {route.destinationName}
+                                                    </Text>
+                                                    <Text fontSize="xs" color="gray.500">
+                                                        Créé : {formatDate(route.createdAt)}
+                                                    </Text>
+                                                </Flex>
+                                            </Box>
+                                        ))}
+                                        {recentData.recentRoutes.length > displayCount.routes && (
+                                            <Button
+                                                mt={4}
+                                                w="full"
+                                                onClick={() => handleLoadMore('routes')}
+                                                colorScheme="blue"
+                                                variant="outline"
+                                            >
+                                                Charger plus d'itinéraires
+                                            </Button>
                                         )}
                                     </CardBody>
                                 </Card>
@@ -255,47 +286,40 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
                                 <Card bg={cardBg} boxShadow="md">
                                     <CardBody>
                                         <Heading size="md" mb={4}>Incidents récents</Heading>
-                                        <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-                                            {recentData.recentIncidents.length > 0 ? (
-                                                recentData.recentIncidents.map((incident, index) => (
-                                                    <Box
-                                                        key={incident.id || index}
-                                                        p={3}
-                                                        borderWidth="1px"
-                                                        borderRadius="md"
-                                                        bg={incident.active ? "orange.50" : "gray.50"}
-                                                        _dark={{ bg: incident.active ? "orange.900" : "gray.700" }}
-                                                        borderLeftWidth="4px"
-                                                        borderLeftColor={incident.active ? "orange.500" : "gray.400"}
-                                                    >
-                                                        <Flex justify="space-between" align="center">
-                                                            <Heading size="sm">{renderType(incident.incidentType)}</Heading>
-                                                            <Text
-                                                                fontSize="xs"
-                                                                px={2}
-                                                                py={1}
-                                                                borderRadius="full"
-                                                                bg={incident.active ? "orange.200" : "gray.200"}
-                                                                _dark={{ bg: incident.active ? "orange.700" : "gray.600" }}
-                                                            >
-                                                                {incident.active ? "Actif" : "Résolu"}
-                                                            </Text>
-                                                        </Flex>
-                                                        <Text mt={1} fontSize="sm">{incident.description || "Aucune description"}</Text>
-                                                        <Flex justify="space-between" mt={2}>
-                                                            <Text fontSize="xs" color="gray.500">
-                                                                Signalé par: {incident.username || "Anonyme"}
-                                                            </Text>
-                                                            <Text fontSize="xs" color="gray.500">
-                                                                {formatDate(incident.createdAt)}
-                                                            </Text>
-                                                        </Flex>
-                                                    </Box>
-                                                ))
-                                            ) : (
-                                                <Text color="gray.500" gridColumn="span 2">Aucun incident récent</Text>
-                                            )}
-                                        </Grid>
+                                        {recentData.recentIncidents.slice(0, displayCount.incidents).map((incident, index) => (
+                                            <Box
+                                                key={incident.id || index}
+                                                p={3}
+                                                mb={2}
+                                                borderWidth="1px"
+                                                borderRadius="md"
+                                                _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
+                                            >
+                                                <Flex justify="space-between">
+                                                    <Flex align="center">
+                                                        <Icon as={FaExclamationTriangle} mr={2} color="orange.500" />
+                                                        <Text fontWeight="medium">{renderType(incident.incidentType)}</Text>
+                                                    </Flex>
+                                                    <Text fontSize="xs" color="gray.500">
+                                                        Signalé : {formatDate(incident.createdAt)}
+                                                    </Text>
+                                                </Flex>
+                                                <Text fontSize="sm" mt={1} color="gray.600">
+                                                    {incident.description}
+                                                </Text>
+                                            </Box>
+                                        ))}
+                                        {recentData.recentIncidents.length > displayCount.incidents && (
+                                            <Button
+                                                mt={4}
+                                                w="full"
+                                                onClick={() => handleLoadMore('incidents')}
+                                                colorScheme="blue"
+                                                variant="outline"
+                                            >
+                                                Charger plus d'incidents
+                                            </Button>
+                                        )}
                                     </CardBody>
                                 </Card>
                             </GridItem>
@@ -372,8 +396,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         };
 
         const recentData: RecentData = {
-            recentUsers: userResponse.data.data.users,
-            recentRoutes: routesResponse.data.data.routes,
+            recentUsers: userResponse.data.data.users.slice(0, 10),
+            recentRoutes: routesResponse.data.data.routes.slice(0, 10),
             recentIncidents: incidentsResponse.data.data.incidents
         };
 

@@ -5,6 +5,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const winston = require('winston');
 const sequelize = require('./config/database');
+const cron = require('node-cron');
+const { fetchAndStoreIncidents } = require('./cron/trafficIncidentsCron');
 
 // Routes
 const routesRoutes = require('./routes/routesRoutes');
@@ -80,6 +82,8 @@ app.use((err, req, res, next) => {
 sequelize.sync({ alter: process.env.NODE_ENV === 'development', force : true })
     .then(() => {
         console.log(`BDD synchronisée avec succès`);
+        
+        // Démarrer le serveur
         app.listen(PORT, () => {
             logger.info(`Navigation service running on port ${PORT}`);
             console.log(`Navigation service running on port ${PORT}`);
@@ -88,6 +92,14 @@ sequelize.sync({ alter: process.env.NODE_ENV === 'development', force : true })
     .catch((err) => {
         logger.error('Erreur lors de la synchronisation des modèles:', err);
     });
+
+// Démarrer le cron job pour les incidents de trafic
+console.log('Starting traffic incidents cron job...');
+// Exécuter toutes les 5 minutes
+cron.schedule('*/5 * * * *', () => {
+    console.log('Running traffic incidents cron job...');
+    fetchAndStoreIncidents();
+});
 
 // Gestion de l'arrêt propre du serveur
 process.on('SIGINT', async () => {

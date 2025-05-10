@@ -54,7 +54,7 @@ import {
     TabPanel,
     Icon, VStack
 } from '@chakra-ui/react';
-import { FiMoreVertical, FiSearch, FiTrash2, FiEye, FiMap, FiDownload, FiEdit, FiCalendar, FiClock, FiUser } from 'react-icons/fi';
+import { FiMoreVertical, FiSearch, FiTrash2, FiEye, FiMap, FiDownload, FiEdit, FiCalendar, FiClock, FiUser, FiRefreshCw } from 'react-icons/fi';
 import { FaRoute, FaMapMarkerAlt, FaStar } from 'react-icons/fa';
 import AdminLayout from '@/components/AdminLayout';
 import axios from 'axios';
@@ -86,6 +86,7 @@ interface Route {
 const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
     const [routes, setRoutes] = useState<Route[]>(initialRoutes);
     const [filteredRoutes, setFilteredRoutes] = useState<Route[]>(initialRoutes);
+    const [displayCount, setDisplayCount] = useState(100);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortField, setSortField] = useState<string>('lastUsed');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -361,71 +362,76 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
                                     </Tr>
                                 </Thead>
                                 <Tbody>
-                                    {filteredRoutes.length > 0 ? (
-                                        filteredRoutes.map((route) => (
-                                            <Tr key={route.id}>
-                                                <Td>
-                                                    <Flex align="center">
-                                                        {route.isFavorite && (
-                                                            <Icon as={FaStar} color="yellow.400" mr={2} />
-                                                        )}
-                                                        <Text fontWeight="medium">{route.name}</Text>
-                                                    </Flex>
-                                                </Td>
-                                                <Td>
-                                                    <Text fontSize="sm" noOfLines={1}>
-                                                        {route.originName} → {route.destinationName}
-                                                    </Text>
-                                                </Td>
-                                                <Td>{formatDistance(route.distance)}</Td>
-                                                <Td>{formatDuration(route.duration)}</Td>
-                                                <Td>
-                                                    <Text fontSize="sm">{route.username}</Text>
-                                                </Td>
-                                                <Td>
-                                                    <Text fontSize="sm">{formatDate(route.createdAt)}</Text>
-                                                </Td>
-                                                <Td>
-                                                    <Menu>
-                                                        <MenuButton
-                                                            as={IconButton}
-                                                            icon={<FiMoreVertical />}
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            aria-label="Actions"
-                                                        />
-                                                        <MenuList>
-                                                            <MenuItem icon={<FiEye />} onClick={() => handleViewDetails(route)}>
-                                                                Voir les détails
-                                                            </MenuItem>
-                                                            <MenuItem icon={<FiMap />} onClick={() => handleViewOnMap(route)}>
-                                                                Voir sur la carte
-                                                            </MenuItem>
-                                                            <MenuItem icon={<FiDownload />} onClick={() => handleDownloadQRCode(route)}>
-                                                                Générer QR Code
-                                                            </MenuItem>
-                                                            <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => handleDeleteRoute(route)}>
-                                                                Supprimer
-                                                            </MenuItem>
-                                                        </MenuList>
-                                                    </Menu>
-                                                </Td>
-                                            </Tr>
-                                        ))
-                                    ) : (
-                                        <Tr>
-                                            <Td colSpan={8} textAlign="center" py={10}>
-                                                <Text color="gray.500">Aucun itinéraire trouvé</Text>
+                                    {filteredRoutes.slice(0, displayCount).map((route) => (
+                                        <Tr key={route.id}>
+                                            <Td>
+                                                <Flex align="center">
+                                                    {route.isFavorite && (
+                                                        <Icon as={FaStar} color="yellow.400" mr={2} />
+                                                    )}
+                                                    <Text fontWeight="medium">{route.name}</Text>
+                                                </Flex>
+                                            </Td>
+                                            <Td>
+                                                <Text fontSize="sm" noOfLines={1}>
+                                                    {route.originName} → {route.destinationName}
+                                                </Text>
+                                            </Td>
+                                            <Td>{formatDistance(route.distance)}</Td>
+                                            <Td>{formatDuration(route.duration)}</Td>
+                                            <Td>
+                                                <Text fontSize="sm">{route.username}</Text>
+                                            </Td>
+                                            <Td>
+                                                <Text fontSize="sm">{formatDate(route.createdAt)}</Text>
+                                            </Td>
+                                            <Td>
+                                                <Menu>
+                                                    <MenuButton
+                                                        as={IconButton}
+                                                        icon={<FiMoreVertical />}
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        aria-label="Actions"
+                                                    />
+                                                    <MenuList>
+                                                        <MenuItem icon={<FiEye />} onClick={() => handleViewDetails(route)}>
+                                                            Voir les détails
+                                                        </MenuItem>
+                                                        <MenuItem icon={<FiMap />} onClick={() => handleViewOnMap(route)}>
+                                                            Voir sur la carte
+                                                        </MenuItem>
+                                                        <MenuItem icon={<FiDownload />} onClick={() => handleDownloadQRCode(route)}>
+                                                            Générer QR Code
+                                                        </MenuItem>
+                                                        <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => handleDeleteRoute(route)}>
+                                                            Supprimer
+                                                        </MenuItem>
+                                                    </MenuList>
+                                                </Menu>
                                             </Td>
                                         </Tr>
-                                    )}
+                                    ))}
                                 </Tbody>
                             </Table>
                         </TableContainer>
 
-                        <Text mt={4} color="gray.500" fontSize="sm">
-                            {filteredRoutes.length} itinéraire{filteredRoutes.length !== 1 ? 's' : ''} trouvé{filteredRoutes.length !== 1 ? 's' : ''}
-                        </Text>
+                        <Flex justify="space-between" align="center" mt={4}>
+                            <Text color="gray.500" fontSize="sm">
+                                {filteredRoutes.slice(0, displayCount).length} itinéraire{filteredRoutes.slice(0, displayCount).length !== 1 ? 's' : ''} affiché{filteredRoutes.slice(0, displayCount).length !== 1 ? 's' : ''} sur {filteredRoutes.length}
+                            </Text>
+                            
+                            {displayCount < filteredRoutes.length && (
+                                <Button
+                                    onClick={() => setDisplayCount(prev => prev + 100)}
+                                    colorScheme="blue"
+                                    variant="outline"
+                                    leftIcon={<FiRefreshCw />}
+                                >
+                                    Charger plus d'itinéraires
+                                </Button>
+                            )}
+                        </Flex>
                     </>
                 )}
 

@@ -54,7 +54,8 @@ import {
     Stack,
     Switch,
     FormControl,
-    FormLabel
+    FormLabel,
+    ButtonGroup
 } from '@chakra-ui/react';
 import {
     FiMoreVertical,
@@ -106,6 +107,7 @@ interface Incident {
 const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) => {
     const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
     const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>(initialIncidents);
+    const [displayedIncidents, setDisplayedIncidents] = useState<Incident[]>(initialIncidents.slice(0, 100));
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -113,6 +115,7 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
     const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
     const [loading, setLoading] = useState(false);
     const [showExpiredIncidents, setShowExpiredIncidents] = useState(false);
+    const [displayCount, setDisplayCount] = useState(100);
 
     const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
     const { isOpen: isResolveOpen, onOpen: onResolveOpen, onClose: onResolveClose } = useDisclosure();
@@ -160,6 +163,11 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
 
         setFilteredIncidents(result);
     }, [searchTerm, statusFilter, typeFilter, severityFilter, showExpiredIncidents, incidents]);
+
+    // Update displayed incidents when filtered incidents change
+    useEffect(() => {
+        setDisplayedIncidents(filteredIncidents.slice(0, displayCount));
+    }, [filteredIncidents, displayCount]);
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return 'N/A';
@@ -361,6 +369,10 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
     };
 
     const stats = getIncidentStats();
+
+    const handleLoadMore = () => {
+        setDisplayCount(prev => prev + 100);
+    };
 
     return (
         <AdminLayout>
@@ -575,8 +587,8 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                                     </Tr>
                                 </Thead>
                                 <Tbody>
-                                    {filteredIncidents.length > 0 ? (
-                                        filteredIncidents.map((incident) => (
+                                    {displayedIncidents.length > 0 ? (
+                                        displayedIncidents.map((incident) => (
                                             <Tr key={incident.id}>
                                                 <Td>
                                                     <Flex align="center">
@@ -654,9 +666,22 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                             </Table>
                         </TableContainer>
 
-                        <Text color="gray.500" fontSize="sm">
-                            {filteredIncidents.length} incident{filteredIncidents.length !== 1 ? 's' : ''} trouvé{filteredIncidents.length !== 1 ? 's' : ''}
-                        </Text>
+                        <Flex justify="space-between" align="center" mt={4}>
+                            <Text color="gray.500" fontSize="sm">
+                                {displayedIncidents.length} incident{displayedIncidents.length !== 1 ? 's' : ''} affiché{displayedIncidents.length !== 1 ? 's' : ''} sur {filteredIncidents.length}
+                            </Text>
+                            
+                            {displayedIncidents.length < filteredIncidents.length && (
+                                <Button
+                                    onClick={handleLoadMore}
+                                    colorScheme="blue"
+                                    variant="outline"
+                                    leftIcon={<FiRefreshCw />}
+                                >
+                                    Charger plus d'incidents
+                                </Button>
+                            )}
+                        </Flex>
                     </>
                 )}
 
@@ -842,18 +867,27 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        const incidentsResponse = await axios.get(
-            `${process.env.API_URL}/api/navigation/traffic/reports`,
-            config
-        );
+        // Fetch incidents and users
+        const [incidentsResponse, usersResponse] = await Promise.all([
+            axios.get(`${process.env.API_URL}/api/navigation/traffic/reports`, config),
+            axios.get(`${process.env.API_URL}/api/auth/users`, config)
+        ]);
 
-        console.log('incidentsResponse', incidentsResponse.data.data.incidents);
+        const incidents = incidentsResponse.data.data.incidents;
+        const users = usersResponse.data.data.users;
 
-        const incidents: Incident[] = incidentsResponse.data.data.incidents
+        // Add username to each incident
+        const incidentsWithUsers = incidents.map((incident: any) => {
+            const user = users.find((u: any) => u.id === incident.userId);
+            return {
+                ...incident,
+                username: user ? user.username : 'Utilisateur inconnu'
+            };
+        });
 
         return {
             props: {
-                initialIncidents: incidents
+                initialIncidents: incidentsWithUsers
             },
         };
     } catch (error) {

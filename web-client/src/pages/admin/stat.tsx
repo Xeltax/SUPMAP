@@ -64,6 +64,73 @@ import {
 import AdminLayout from '@/components/AdminLayout';
 import axios from 'axios';
 import api from '@/services/api';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler,
+    ArcElement,
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler,
+    ArcElement
+);
+
+interface User {
+    id: string;
+    username: string;
+    createdAt: string;
+    lastLogin?: string;
+}
+
+interface Route {
+    id: string;
+    userId: string;
+    name: string;
+    originName: string;
+    destinationName: string;
+    distance: number;
+    duration: number;
+    routeType: string;
+    isFavorite: boolean;
+    createdAt: string;
+    updatedAt: string;
+    lastUsed: string;
+    usageCount: number;
+}
+
+interface Incident {
+    id: string;
+    incidentType: string;
+    description: string;
+    coordinates: [number, number];
+    severity: 'low' | 'moderate' | 'high' | 'severe';
+    active: boolean;
+    userId: string;
+    username: string;
+    createdAt: string;
+    updatedAt?: string;
+    expiresAt?: string;
+    validations: number;
+    invalidations: number;
+    isVerified: boolean;
+}
 
 // Types pour les statistiques générales
 interface GeneralStats {
@@ -80,6 +147,32 @@ interface GeneralStats {
     incidentsGrowthRate: number;
 }
 
+// Types pour les données mensuelles
+interface MonthlyData {
+    month: string;
+    users: number;
+    routes: number;
+    incidents: number;
+    activeUsers: number;
+    activeUsersPercentage: number;
+    routeTypes: {
+        fastest: number;
+        shortest: number;
+        balanced: number;
+    };
+    incidentTypes: {
+        accident: number;
+        construction: number;
+        roadClosed: number;
+        other: number;
+    };
+    incidentSeverity: {
+        low: number;
+        medium: number;
+        high: number;
+    };
+}
+
 // Types pour les statistiques d'utilisation
 interface UsageStats {
     activeUsersLast30Days: number;
@@ -92,47 +185,33 @@ interface UsageStats {
     incidentTypeDistribution: { type: string; count: number; percentage: number }[];
 }
 
-// Types pour les données mensuelles
-interface MonthlyData {
-    month: string;
-    users: number;
-    routes: number;
-    incidents: number;
-    activeUsers: number;
-}
-
-// Types pour les statistiques de performance
-interface PerformanceStats {
-    averageResponseTime: number;
-    p95ResponseTime: number;
-    apiCallsPerDay: number;
-    errorRate: number;
-    uptime: number;
-    serverLoad: number;
-}
-
 // Types pour les données de la page
 interface StatsPageProps {
     generalStats: GeneralStats;
     usageStats: UsageStats;
-    monthlyData: MonthlyData[];
-    performanceStats: PerformanceStats;
     topRoutes: any[];
     topIncidents: any[];
     topUsers: any[];
+    monthlyData: MonthlyData[];
+}
+
+interface UserStats {
+    id: string;
+    username: string;
+    routesCount: number;
+    incidentsCount: number;
+    lastLogin: string;
 }
 
 // Composant principal
 const StatsPage = ({
                        generalStats,
                        usageStats,
-                       monthlyData,
-                       performanceStats,
                        topRoutes,
                        topIncidents,
-                       topUsers
+    topUsers,
+    monthlyData
                    }: StatsPageProps) => {
-    const [timeRange, setTimeRange] = useState<string>('30days');
     const [loading, setLoading] = useState<boolean>(false);
 
     // Couleurs adaptives pour le mode clair/sombre
@@ -140,6 +219,36 @@ const StatsPage = ({
     const borderColor = useColorModeValue('gray.200', 'gray.700');
     const statBg = useColorModeValue('blue.50', 'blue.900');
     const textMuted = useColorModeValue('gray.600', 'gray.400');
+
+    const getSeverityColor = (severity: string) => {
+        switch (severity) {
+            case 'low':
+                return 'green';
+            case 'moderate':
+                return 'yellow';
+            case 'high':
+                return 'orange';
+            case 'severe':
+                return 'red';
+            default:
+                return 'gray';
+        }
+    };
+
+    const translateSeverity = (severity: string) => {
+        switch (severity) {
+            case 'low':
+                return 'Faible';
+            case 'moderate':
+                return 'Moyenne';
+            case 'high':
+                return 'Élevée';
+            case 'severe':
+                return 'Sévère';
+            default:
+                return 'Inconnue';
+        }
+    };
 
     // Formater le nombre avec un séparateur de milliers
     const formatNumber = (num: number) => {
@@ -171,6 +280,188 @@ const StatsPage = ({
         alert('Export de données en CSV (fonctionnalité à implémenter)');
     };
 
+    // Configuration des graphiques
+    const monthlyEvolutionOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: 'Évolution mensuelle',
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+            },
+        },
+    };
+
+    const monthlyEvolutionData = {
+        labels: monthlyData.map(data => data.month),
+        datasets: [
+            {
+                label: 'Utilisateurs',
+                data: monthlyData.map(data => data.users),
+                borderColor: 'rgb(53, 162, 235)',
+                backgroundColor: 'rgba(53, 162, 235, 0.5)',
+            },
+            {
+                label: 'Itinéraires',
+                data: monthlyData.map(data => data.routes),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            },
+            {
+                label: 'Incidents',
+                data: monthlyData.map(data => data.incidents),
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            },
+        ],
+    };
+
+    const userEvolutionOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: 'Évolution des utilisateurs',
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+            },
+        },
+    };
+
+    const userEvolutionData = {
+        labels: monthlyData.map(data => data.month),
+        datasets: [
+            {
+                label: 'Nombre d\'utilisateurs',
+                data: monthlyData.map(data => data.users),
+                borderColor: 'rgb(53, 162, 235)',
+                backgroundColor: 'rgba(53, 162, 235, 0.5)',
+                fill: true,
+            },
+            {
+                label: 'Utilisateurs actifs',
+                data: monthlyData.map(data => data.activeUsers),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                fill: true,
+            },
+        ],
+    };
+
+    const routeEvolutionOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: 'Évolution des itinéraires par type',
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                stacked: true,
+            },
+            x: {
+                stacked: true,
+            },
+        },
+    };
+
+    const routeEvolutionData = {
+        labels: monthlyData.map(data => data.month),
+        datasets: [
+            {
+                label: 'Plus rapide',
+                data: monthlyData.map(data => data.routeTypes.fastest),
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderColor: 'rgb(255, 99, 132)',
+                borderWidth: 1,
+            },
+            {
+                label: 'Plus court',
+                data: monthlyData.map(data => data.routeTypes.shortest),
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgb(54, 162, 235)',
+                borderWidth: 1,
+            },
+            {
+                label: 'Équilibré',
+                data: monthlyData.map(data => data.routeTypes.balanced),
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1,
+            },
+        ],
+    };
+
+    const incidentEvolutionOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: 'Évolution des incidents',
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+            },
+        },
+    };
+
+    const incidentEvolutionData = {
+        labels: monthlyData.map(data => data.month),
+        datasets: [
+            {
+                label: 'Accidents',
+                data: monthlyData.map(data => data.incidentTypes.accident),
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderColor: 'rgb(255, 99, 132)',
+                borderWidth: 1,
+            },
+            {
+                label: 'Travaux',
+                data: monthlyData.map(data => data.incidentTypes.construction),
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgb(54, 162, 235)',
+                borderWidth: 1,
+            },
+            {
+                label: 'Route fermée',
+                data: monthlyData.map(data => data.incidentTypes.roadClosed),
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1,
+            },
+            {
+                label: 'Autres',
+                data: monthlyData.map(data => data.incidentTypes.other),
+                backgroundColor: 'rgba(201, 203, 207, 0.5)',
+                borderColor: 'rgb(201, 203, 207)',
+                borderWidth: 1,
+            },
+        ],
+    };
+
     return (
         <AdminLayout>
             <Box maxW="7xl" mx="auto">
@@ -184,19 +475,6 @@ const StatsPage = ({
                     <Heading>Statistiques</Heading>
 
                     <HStack spacing={4}>
-                        <Select
-                            value={timeRange}
-                            onChange={(e) => setTimeRange(e.target.value)}
-                            width={{ base: 'full', md: '180px' }}
-                            size="md"
-                        >
-                            <option value="7days">7 derniers jours</option>
-                            <option value="30days">30 derniers jours</option>
-                            <option value="90days">90 derniers jours</option>
-                            <option value="year">Année en cours</option>
-                            <option value="alltime">Toutes les données</option>
-                        </Select>
-
                         <Button
                             leftIcon={<FiRefreshCw />}
                             colorScheme="blue"
@@ -228,7 +506,6 @@ const StatsPage = ({
                             <Tab><Icon as={FiUsers} mr={2} /> Utilisateurs</Tab>
                             <Tab><Icon as={FaRoute} mr={2} /> Itinéraires</Tab>
                             <Tab><Icon as={FaExclamationTriangle} mr={2} /> Incidents</Tab>
-                            <Tab><Icon as={FiActivity} mr={2} /> Performance</Tab>
                         </TabList>
 
                         <TabPanels>
@@ -271,11 +548,8 @@ const StatsPage = ({
                                         </CardHeader>
                                         <CardBody>
                                             <Center h="200px" color={textMuted}>
-                                                [Graphique d'évolution mensuelle]
+                                                <Line options={monthlyEvolutionOptions} data={monthlyEvolutionData} />
                                             </Center>
-                                            <Text fontSize="sm" color={textMuted} mt={2}>
-                                                L'utilisation de l'application augmente de manière constante avec une croissance de {generalStats.usersGrowthRate}% d'utilisateurs ce mois-ci.
-                                            </Text>
                                         </CardBody>
                                     </Card>
 
@@ -300,11 +574,6 @@ const StatsPage = ({
                                                     label="Incidents par utilisateur"
                                                     value={usageStats.averageIncidentsPerUser.toFixed(1)}
                                                     icon={FaExclamationTriangle}
-                                                />
-                                                <UsageStat
-                                                    label="Uptime du serveur"
-                                                    value={`${performanceStats.uptime.toFixed(2)}%`}
-                                                    icon={FiCheckCircle}
                                                 />
                                             </Stack>
                                         </CardBody>
@@ -333,10 +602,15 @@ const StatsPage = ({
                                                         >
                                                             {index + 1}
                                                         </Badge>
-                                                        <Text noOfLines={1} flex="1">
+                                                        <Box flex="1">
+                                                            <Text noOfLines={1} fontWeight="medium">
                                                             {route.name}
                                                         </Text>
-                                                        <Badge colorScheme="blue" variant="outline" ml={2}>
+                                                            <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                                                                {route.originName} → {route.destinationName}
+                                                            </Text>
+                                                        </Box>
+                                                        <Badge colorScheme="blue" variant="outline">
                                                             {route.usageCount}
                                                         </Badge>
                                                     </ListItem>
@@ -465,7 +739,7 @@ const StatsPage = ({
                                         </CardHeader>
                                         <CardBody>
                                             <Center h="300px" color={textMuted}>
-                                                [Graphique d'évolution des utilisateurs]
+                                                <Line options={userEvolutionOptions} data={userEvolutionData} />
                                             </Center>
                                         </CardBody>
                                     </Card>
@@ -577,7 +851,7 @@ const StatsPage = ({
                                         </CardHeader>
                                         <CardBody>
                                             <Center h="300px" color={textMuted}>
-                                                [Graphique d'évolution des itinéraires]
+                                                <Bar options={routeEvolutionOptions} data={routeEvolutionData} />
                                             </Center>
                                         </CardBody>
                                     </Card>
@@ -693,7 +967,7 @@ const StatsPage = ({
                                         </CardHeader>
                                         <CardBody>
                                             <Center h="300px" color={textMuted}>
-                                                [Graphique d'évolution des incidents]
+                                                <Bar options={incidentEvolutionOptions} data={incidentEvolutionData} />
                                             </Center>
                                         </CardBody>
                                     </Card>
@@ -720,8 +994,24 @@ const StatsPage = ({
                                                 <Tbody>
                                                     {topIncidents.map((incident) => (
                                                         <Tr key={incident.id}>
-                                                            <Td fontWeight="medium">{incident.incidentType}</Td>
-                                                            <Td noOfLines={1}>{incident.description}</Td>
+                                                            <Td>
+                                                                <Flex align="center">
+                                                                    <Icon
+                                                                        as={FaExclamationTriangle}
+                                                                        color={getSeverityColor(incident.severity) + '.500'}
+                                                                        mr={2}
+                                                                    />
+                                                                    {incident.incidentType}
+                                                                </Flex>
+                                                            </Td>
+                                                            <Td minH="40px" display="flex" alignItems="center">
+                                                                <Text noOfLines={1}>{incident.description || 'Aucune description'}</Text>
+                                                            </Td>
+                                                            <Td>
+                                                                <Badge colorScheme={getSeverityColor(incident.severity)}>
+                                                                    {translateSeverity(incident.severity)}
+                                                                </Badge>
+                                                            </Td>
                                                             <Td>
                                                                 <Badge
                                                                     colorScheme={
@@ -733,19 +1023,6 @@ const StatsPage = ({
                                                                         incident.status === 'resolved' ? 'Résolu' : 'En attente'}
                                                                 </Badge>
                                                             </Td>
-                                                            <Td>
-                                                                <Badge
-                                                                    colorScheme={
-                                                                        incident.severity === 'critical' ? 'red' :
-                                                                            incident.severity === 'high' ? 'orange' :
-                                                                                incident.severity === 'medium' ? 'yellow' : 'green'
-                                                                    }
-                                                                >
-                                                                    {incident.severity === 'critical' ? 'Critique' :
-                                                                        incident.severity === 'high' ? 'Élevée' :
-                                                                            incident.severity === 'medium' ? 'Moyenne' : 'Faible'}
-                                                                </Badge>
-                                                            </Td>
                                                             <Td>{incident.username}</Td>
                                                             <Td fontSize="sm">{formatDate(incident.createdAt)}</Td>
                                                         </Tr>
@@ -753,93 +1030,6 @@ const StatsPage = ({
                                                 </Tbody>
                                             </Table>
                                         </TableContainer>
-                                    </CardBody>
-                                </Card>
-                            </TabPanel>
-
-                            {/* Performance */}
-                            <TabPanel>
-                                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6} mb={8}>
-                                    <StatCard
-                                        label="Temps de réponse moyen"
-                                        value={`${performanceStats.averageResponseTime} ms`}
-                                        helpText={`P95: ${performanceStats.p95ResponseTime} ms`}
-                                        icon={FiActivity}
-                                        colorScheme="blue"
-                                    />
-
-                                    <StatCard
-                                        label="Taux d'erreur"
-                                        value={`${performanceStats.errorRate}%`}
-                                        helpText="Sur les 30 derniers jours"
-                                        icon={FiArrowDown}
-                                        colorScheme={performanceStats.errorRate < 1 ? "green" : "red"}
-                                    />
-
-                                    <StatCard
-                                        label="Uptime"
-                                        value={`${performanceStats.uptime}%`}
-                                        helpText="Sur les 30 derniers jours"
-                                        icon={FiCheckCircle}
-                                        colorScheme="green"
-                                    />
-                                </SimpleGrid>
-
-                                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={8}>
-                                    {/* Graphique de performance (placeholder) */}
-                                    <Card bg={cardBg}>
-                                        <CardHeader>
-                                            <Heading size="md">Temps de réponse API</Heading>
-                                        </CardHeader>
-                                        <CardBody>
-                                            <Center h="300px" color={textMuted}>
-                                                [Graphique de temps de réponse API]
-                                            </Center>
-                                        </CardBody>
-                                    </Card>
-
-                                    {/* Utilisation des ressources (placeholder) */}
-                                    <Card bg={cardBg}>
-                                        <CardHeader>
-                                            <Heading size="md">Utilisation des ressources</Heading>
-                                        </CardHeader>
-                                        <CardBody>
-                                            <Center h="300px" color={textMuted}>
-                                                [Graphique d'utilisation des ressources]
-                                            </Center>
-                                        </CardBody>
-                                    </Card>
-                                </SimpleGrid>
-
-                                {/* Calls API par jour */}
-                                <Card bg={cardBg} mb={8}>
-                                    <CardHeader>
-                                        <Heading size="md">Appels API</Heading>
-                                    </CardHeader>
-                                    <CardBody>
-                                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                                            <Stat
-                                                bg={statBg}
-                                                p={4}
-                                                borderRadius="md"
-                                                textAlign="center"
-                                            >
-                                                <StatLabel fontSize="lg">Appels API par jour</StatLabel>
-                                                <StatNumber fontSize="4xl">{formatNumber(performanceStats.apiCallsPerDay)}</StatNumber>
-                                                <StatHelpText>Moyenne sur 30 jours</StatHelpText>
-                                            </Stat>
-
-                                            <Stat
-                                                bg={statBg}
-                                                p={4}
-                                                borderRadius="md"
-                                                textAlign="center"
-                                            >
-                                                <StatLabel fontSize="lg">Charge serveur</StatLabel>
-                                                <StatNumber fontSize="4xl">{performanceStats.serverLoad}%</StatNumber>
-                                                <StatHelpText>Moyenne sur 30 jours</StatHelpText>
-                                            </Stat>
-                                        </SimpleGrid>
                                     </CardBody>
                                 </Card>
                             </TabPanel>
@@ -946,117 +1136,260 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Pour l'exemple, utilisons des données simulées
-        // Dans un cas réel, vous feriez des appels API pour récupérer les statistiques
+        // Fetch all data in parallel
+        const [incidentsResponse, usersResponse, routesResponse] = await Promise.all([
+            axios.get(`${process.env.API_URL}/api/navigation/traffic/reports`, config),
+            axios.get(`${process.env.API_URL}/api/auth/users`, config),
+            axios.get(`${process.env.API_URL}/api/navigation/routes/all`, config)
+        ]);
 
-        // Statistiques générales
+        const incidents: Incident[] = incidentsResponse.data.data.incidents;
+        const users: User[] = usersResponse.data.data.users;
+        const routes: Route[] = routesResponse.data.data.routes;
+
+        // Add username to each incident
+        const incidentsWithUsers = incidents.map(incident => {
+            const user = users.find(u => u.id === incident.userId);
+            return {
+                ...incident,
+                username: user ? user.username : 'Utilisateur inconnu'
+            };
+        });
+
+        // Add username to each route
+        const routesWithUsers = routes.map(route => {
+            const user = users.find(u => u.id === route.userId);
+            return {
+                ...route,
+                username: user ? user.username : 'Utilisateur inconnu'
+            };
+        });
+
+        // Get top 10 routes and incidents
+        const topRoutes = routesWithUsers
+            .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
+            .slice(0, 10);
+
+        const topIncidents = incidentsWithUsers
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 10);
+
+        // Calculate route statistics
+        const totalRoutes = routes.length;
+        const newRoutesThisMonth = routes.filter(route => {
+            const routeDate = new Date(route.createdAt);
+            const now = new Date();
+            return routeDate.getMonth() === now.getMonth() && 
+                   routeDate.getFullYear() === now.getFullYear();
+        }).length;
+
+        // Calculate route type distribution
+        const routeTypes = Array.from(new Set(routes.map(route => route.routeType)));
+        const routeTypeDistribution = routeTypes.map(type => {
+            const count = routes.filter(route => route.routeType === type).length;
+            return {
+                type,
+                count,
+                percentage: Math.round((count / totalRoutes) * 100)
+            };
+        });
+
+        // Calculate incident statistics
+        const totalIncidents = incidentsWithUsers.length;
+        const activeIncidents = incidentsWithUsers.filter(incident => incident.active).length;
+        const newIncidentsThisMonth = incidentsWithUsers.filter(incident => {
+            const incidentDate = new Date(incident.createdAt);
+            const now = new Date();
+            return incidentDate.getMonth() === now.getMonth() && 
+                   incidentDate.getFullYear() === now.getFullYear();
+        }).length;
+
+        // Calculate incident type distribution
+        const incidentTypes = Array.from(new Set(incidentsWithUsers.map(incident => incident.incidentType)));
+        const incidentTypeDistribution = incidentTypes.map(type => {
+            const count = incidentsWithUsers.filter(incident => incident.incidentType === type).length;
+            return {
+                type,
+                count,
+                percentage: Math.round((count / totalIncidents) * 100)
+            };
+        });
+
+        // Calculate user statistics
+        const totalUsers = users.length;
+        const newUsersThisMonth = users.filter((user: User) => {
+            const userDate = new Date(user.createdAt);
+            const now = new Date();
+            return userDate.getMonth() === now.getMonth() && 
+                   userDate.getFullYear() === now.getFullYear();
+        }).length;
+
+        // Calculate active users
+        const activeUsers = new Set([
+            ...routes.filter(route => {
+                const routeDate = new Date(route.createdAt);
+                const now = new Date();
+                const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                return routeDate >= thirtyDaysAgo && routeDate <= now;
+            }).map(route => route.userId),
+            ...incidentsWithUsers.filter(incident => {
+                const incidentDate = new Date(incident.createdAt);
+                const now = new Date();
+                const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                return incidentDate >= thirtyDaysAgo && incidentDate <= now && incident.username !== 'Utilisateur inconnu';
+            }).map(incident => incident.userId)
+        ]).size;
+
+        // Calculate growth rates
+        const lastMonthUsers = users.filter((user: User) => {
+            const userDate = new Date(user.createdAt);
+            const now = new Date();
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            return userDate >= lastMonth && userDate < now;
+        }).length;
+
+        const usersGrowthRate = lastMonthUsers > 0 
+            ? ((newUsersThisMonth - lastMonthUsers) / lastMonthUsers) * 100 
+            : 0;
+
+        const lastMonthRoutes = routes.filter(route => {
+            const routeDate = new Date(route.createdAt);
+            const now = new Date();
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            return routeDate >= lastMonth && routeDate < now;
+        }).length;
+
+        const routesGrowthRate = lastMonthRoutes > 0 
+            ? ((newRoutesThisMonth - lastMonthRoutes) / lastMonthRoutes) * 100 
+            : 0;
+
+        const lastMonthIncidents = incidentsWithUsers.filter(incident => {
+            const incidentDate = new Date(incident.createdAt);
+            const now = new Date();
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            return incidentDate >= lastMonth && incidentDate < now;
+        }).length;
+
+        const incidentsGrowthRate = lastMonthIncidents > 0 
+            ? ((newIncidentsThisMonth - lastMonthIncidents) / lastMonthIncidents) * 100 
+            : 0;
+
+        // Prepare top users data
+        const topUsers = users.map((user: User) => {
+            const userRoutes = routes.filter((route: Route) => route.userId === user.id);
+            const userIncidents = incidentsWithUsers.filter((incident: Incident) => 
+                incident.userId === user.id && incident.username !== 'Utilisateur inconnu'
+            );
+            return {
+                id: user.id,
+                username: user.username,
+                routesCount: userRoutes.length,
+                incidentsCount: userIncidents.length,
+                lastLogin: user.lastLogin || user.createdAt
+            };
+        }).sort((a: UserStats, b: UserStats) => (b.routesCount + b.incidentsCount) - (a.routesCount + a.incidentsCount))
+          .slice(0, 10);
+
+        // General statistics
         const generalStats: GeneralStats = {
-            totalUsers: 154,
-            activeUsers: 98,
-            newUsersThisMonth: 12,
-            usersGrowthRate: 8.2,
-            totalRoutes: 432,
-            newRoutesThisMonth: 45,
-            routesGrowthRate: 12.5,
-            totalIncidents: 67,
-            activeIncidents: 23,
-            newIncidentsThisMonth: 8,
-            incidentsGrowthRate: -5.3
+            totalUsers,
+            activeUsers,
+            newUsersThisMonth,
+            usersGrowthRate,
+            totalRoutes,
+            newRoutesThisMonth,
+            routesGrowthRate,
+            totalIncidents,
+            activeIncidents,
+            newIncidentsThisMonth,
+            incidentsGrowthRate
         };
 
-        // Statistiques d'utilisation
+        // Usage statistics
         const usageStats: UsageStats = {
-            activeUsersLast30Days: 78,
-            averageRoutesPerUser: 2.8,
-            averageIncidentsPerUser: 0.43,
-            dailyAverageNewUsers: 0.4,
-            dailyAverageNewRoutes: 1.5,
-            dailyAverageNewIncidents: 0.27,
-            routeTypeDistribution: [
-                { type: "Le plus rapide", count: 245, percentage: 57 },
-                { type: "Le plus court", count: 98, percentage: 23 },
-                { type: "Éviter les péages", count: 65, percentage: 15 },
-                { type: "Panoramique", count: 24, percentage: 5 }
-            ],
-            incidentTypeDistribution: [
-                { type: "Accident", count: 18, percentage: 27 },
-                { type: "Travaux", count: 15, percentage: 22 },
-                { type: "Route bloquée", count: 12, percentage: 18 },
-                { type: "Embouteillage", count: 14, percentage: 21 },
-                { type: "Conditions météo", count: 8, percentage: 12 }
-            ]
+            activeUsersLast30Days: activeUsers,
+            averageRoutesPerUser: totalRoutes / totalUsers,
+            averageIncidentsPerUser: incidentsWithUsers.filter(incident => incident.username !== 'Utilisateur inconnu').length / totalUsers,
+            dailyAverageNewUsers: newUsersThisMonth / 30,
+            dailyAverageNewRoutes: newRoutesThisMonth / 30,
+            dailyAverageNewIncidents: newIncidentsThisMonth / 30,
+            routeTypeDistribution,
+            incidentTypeDistribution
         };
 
-        // Données mensuelles
-        const monthlyData: MonthlyData[] = [
-            { month: "Jan 2025", users: 115, routes: 320, incidents: 45, activeUsers: 75 },
-            { month: "Fév 2025", users: 125, routes: 345, incidents: 52, activeUsers: 82 },
-            { month: "Mar 2025", users: 135, routes: 375, incidents: 58, activeUsers: 88 },
-            { month: "Avr 2025", users: 142, routes: 405, incidents: 63, activeUsers: 92 },
-            { month: "Mai 2025", users: 154, routes: 432, incidents: 67, activeUsers: 98 }
-        ];
+        // Generate monthly data from existing data
+        const now = new Date();
+        const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1); // Last 12 months
+        const monthlyData = Array.from({ length: 12 }, (_, i) => {
+            const month = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+            const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+            const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
 
-        // Statistiques de performance
-        const performanceStats: PerformanceStats = {
-            averageResponseTime: 125,
-            p95ResponseTime: 350,
-            apiCallsPerDay: 12500,
-            errorRate: 0.8,
-            uptime: 99.97,
-            serverLoad: 32
-        };
+            // Filter data for this month
+            const cumulativeUsers = users.filter(user => {
+                const userDate = new Date(user.createdAt);
+                return userDate <= monthEnd;
+            });
 
-        // Top routes
-        const topRoutes = [
-            { id: 101, name: "Trajet quotidien", originName: "Caen", destinationName: "Bayeux", username: "Jules Martin", distance: 25000, usageCount: 42 },
-            { id: 102, name: "Route touristique", originName: "Caen", destinationName: "Mont Saint-Michel", username: "Marie Dubois", distance: 95000, usageCount: 30 },
-            { id: 103, name: "Visite client", originName: "Caen", destinationName: "Rouen", username: "Thomas Bernard", distance: 120000, usageCount: 28 },
-            { id: 104, name: "Livraison", originName: "Caen", destinationName: "Cherbourg", username: "Jules Martin", distance: 110000, usageCount: 25 },
-            { id: 105, name: "Week-end à la plage", originName: "Caen", destinationName: "Deauville", username: "Sophie Leroy", distance: 45000, usageCount: 22 },
-            { id: 106, name: "Visite famille", originName: "Caen", destinationName: "Paris", username: "Thomas Bernard", distance: 230000, usageCount: 18 },
-            { id: 107, name: "Rendez-vous", originName: "Bayeux", destinationName: "Lisieux", username: "Marie Dubois", distance: 65000, usageCount: 15 },
-            { id: 108, name: "Route des vacances", originName: "Caen", destinationName: "Nantes", username: "Sophie Leroy", distance: 280000, usageCount: 12 },
-            { id: 109, name: "Shopping", originName: "Caen", destinationName: "Rennes", username: "Jules Martin", distance: 170000, usageCount: 10 },
-            { id: 110, name: "Trajet professionnel", originName: "Caen", destinationName: "Le Havre", username: "Thomas Bernard", distance: 75000, usageCount: 9 }
-        ];
+            const monthRoutes = routes.filter(route => {
+                const routeDate = new Date(route.createdAt);
+                return routeDate >= monthStart && routeDate <= monthEnd;
+            });
 
-        // Top incidents
-        const topIncidents = [
-            { id: 201, incidentType: "Accident", description: "Collision entre deux véhicules", severity: "high", status: "active", username: "Jules Martin", createdAt: "2025-05-05T16:30:00Z" },
-            { id: 202, incidentType: "Travaux", description: "Réduction à une voie", severity: "medium", status: "active", username: "Marie Dubois", createdAt: "2025-05-04T11:45:00Z" },
-            { id: 203, incidentType: "Route bloquée", description: "Arbre tombé sur la chaussée", severity: "critical", status: "resolved", username: "Thomas Bernard", createdAt: "2025-05-03T14:20:00Z" },
-            { id: 204, incidentType: "Embouteillage", description: "Trafic dense", severity: "low", status: "active", username: "Sophie Leroy", createdAt: "2025-05-03T17:15:00Z" },
-            { id: 205, incidentType: "Conditions météo", description: "Route glissante après la pluie", severity: "medium", status: "pending", username: "Jules Martin", createdAt: "2025-05-02T09:10:00Z" },
-            { id: 206, incidentType: "Accident", description: "Véhicule en panne sur la voie de droite", severity: "medium", status: "active", username: "Thomas Bernard", createdAt: "2025-05-01T14:50:00Z" },
-            { id: 207, incidentType: "Travaux", description: "Travaux de réfection de chaussée", severity: "high", status: "active", username: "Marie Dubois", createdAt: "2025-04-30T10:15:00Z" },
-            { id: 208, incidentType: "Embouteillage", description: "Ralentissement important", severity: "medium", status: "resolved", username: "Sophie Leroy", createdAt: "2025-04-29T17:30:00Z" },
-            { id: 209, incidentType: "Route bloquée", description: "Manifestation sur la voie", severity: "high", status: "resolved", username: "Jules Martin", createdAt: "2025-04-28T12:00:00Z" },
-            { id: 210, incidentType: "Conditions météo", description: "Brouillard dense, visibilité réduite", severity: "critical", status: "resolved", username: "Thomas Bernard", createdAt: "2025-04-27T08:45:00Z" }
-        ];
+            const monthIncidents = incidentsWithUsers.filter(incident => {
+                const incidentDate = new Date(incident.createdAt);
+                return incidentDate >= monthStart && incidentDate <= monthEnd;
+            });
 
-        // Top utilisateurs
-        const topUsers = [
-            { id: 1, username: "Jules Martin", routesCount: 25, incidentsCount: 12, lastLogin: "2025-05-07T09:30:00Z" },
-            { id: 2, username: "Marie Dubois", routesCount: 18, incidentsCount: 8, lastLogin: "2025-05-06T14:15:00Z" },
-            { id: 3, username: "Thomas Bernard", routesCount: 15, incidentsCount: 10, lastLogin: "2025-05-07T11:20:00Z" },
-            { id: 4, username: "Sophie Leroy", routesCount: 12, incidentsCount: 6, lastLogin: "2025-05-05T16:45:00Z" },
-            { id: 5, username: "Lucas Moreau", routesCount: 10, incidentsCount: 5, lastLogin: "2025-05-06T08:50:00Z" },
-            { id: 6, username: "Emma Petit", routesCount: 8, incidentsCount: 3, lastLogin: "2025-05-04T19:10:00Z" },
-            { id: 7, username: "Louis Robert", routesCount: 7, incidentsCount: 2, lastLogin: "2025-05-03T12:30:00Z" },
-            { id: 8, username: "Léa Durand", routesCount: 6, incidentsCount: 4, lastLogin: "2025-05-02T15:20:00Z" },
-            { id: 9, username: "Noah Simon", routesCount: 5, incidentsCount: 1, lastLogin: "2025-05-01T10:45:00Z" },
-            { id: 10, username: "Jade Martin", routesCount: 4, incidentsCount: 3, lastLogin: "2025-04-30T14:55:00Z" }
-        ];
+            // Calculate active users for this month
+            const monthActiveUsers = new Set([
+                ...monthRoutes.map(route => route.userId),
+                ...monthIncidents.filter(incident => incident.username !== 'Utilisateur inconnu').map(incident => incident.userId)
+            ]).size;
+
+            // Calculate route types for this month
+            const routeTypes = {
+                fastest: monthRoutes.filter(route => route.routeType === 'fastest').length,
+                shortest: monthRoutes.filter(route => route.routeType === 'shortest').length,
+                balanced: monthRoutes.filter(route => route.routeType === 'balanced').length,
+            };
+
+            // Calculate incident types for this month
+            const incidentTypes = {
+                accident: monthIncidents.filter(incident => incident.incidentType === 'accident').length,
+                construction: monthIncidents.filter(incident => incident.incidentType === 'roadworks').length,
+                roadClosed: monthIncidents.filter(incident => incident.incidentType === 'roadClosed').length,
+                other: monthIncidents.filter(incident => !['accident', 'roadworks', 'roadClosed'].includes(incident.incidentType)).length,
+            };
+
+            // Calculate incident severity for this month
+            const incidentSeverity = {
+                low: monthIncidents.filter(incident => incident.severity === 'low').length,
+                medium: monthIncidents.filter(incident => incident.severity === 'moderate').length,
+                high: monthIncidents.filter(incident => incident.severity === 'high').length,
+            };
+
+            return {
+                month: month.toLocaleString('fr-FR', { month: 'long' }),
+                users: cumulativeUsers.length,
+                routes: monthRoutes.length,
+                incidents: monthIncidents.length,
+                activeUsers: monthActiveUsers,
+                activeUsersPercentage: cumulativeUsers.length > 0 ? Math.round((monthActiveUsers / cumulativeUsers.length) * 100) : 0,
+                routeTypes,
+                incidentTypes,
+                incidentSeverity,
+            };
+        });
 
         return {
             props: {
                 generalStats,
                 usageStats,
-                monthlyData,
-                performanceStats,
                 topRoutes,
                 topIncidents,
-                topUsers
+                topUsers,
+                monthlyData,
             },
         };
     } catch (error) {
@@ -1098,18 +1431,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                     routeTypeDistribution: [],
                     incidentTypeDistribution: []
                 },
-                monthlyData: [],
-                performanceStats: {
-                    averageResponseTime: 0,
-                    p95ResponseTime: 0,
-                    apiCallsPerDay: 0,
-                    errorRate: 0,
-                    uptime: 0,
-                    serverLoad: 0
-                },
                 topRoutes: [],
                 topIncidents: [],
-                topUsers: []
+                topUsers: [],
+                monthlyData: [],
             },
         };
     }

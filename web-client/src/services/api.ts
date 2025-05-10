@@ -10,6 +10,7 @@ export interface ApiResponse<T> {
 }
 
 console.log(process.env.NEXT_PUBLIC_API_URL )
+console.log(process.env.API_URL )
 const isServer = typeof window === 'undefined'
 // Configuration de base d'Axios
 const apiConfig: AxiosRequestConfig = {

@@ -14,7 +14,7 @@ exports.register = async (req, res, next) => {
         if (!errors.isEmpty()) {
             return res.status(400).json({
                 status: 'error',
-                errors: errors.array()
+                message : errors.array()[0].msg
             });
         }
 

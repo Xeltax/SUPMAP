@@ -631,7 +631,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         };
 
         const routesResponse = await axios.get(
-            `${process.env.API_URL}/api/navigation/routes/user`,
+            `${process.env.API_URL}/api/navigation/routes/all`,
             config
         );
 

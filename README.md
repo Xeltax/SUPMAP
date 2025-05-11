@@ -17,6 +17,7 @@ Supmap est une application de navigation développée pour l'entreprise Trafine.
         - [Auth Service](#auth-service)
         - [Navigation Service](#navigation-service)
         - [Front-end](#front-end)
+        - [Client mobile](#client-mobile)
     - [Erreurs possibles](#erreurs-possibles)
     - [Architecture](#architecture)
         - [API Gateway](#api-gateway-1)

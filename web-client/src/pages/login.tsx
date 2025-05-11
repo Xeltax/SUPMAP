@@ -72,7 +72,7 @@ const Login = () => {
             <Stack spacing="8">
                 <Stack spacing="6" align="center">
                     <Heading size="xl" fontWeight="bold">
-                        Connexion à Trafine
+                        Connexion à SupMap
                     </Heading>
                     <Text color={useColorModeValue('gray.600', 'gray.400')}>
                         Naviguez en temps réel avec notre communauté

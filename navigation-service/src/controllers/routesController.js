@@ -346,8 +346,9 @@ exports.getRouteById = async (req, res, next) => {
             });
         }
 
-        // Mettre à jour la date de dernière utilisation
+        // Mettre à jour la date de dernière utilisation et incrémenter le compteur d'utilisation
         route.lastUsed = new Date();
+        route.usageCount = (route.usageCount || 0) + 1;
         await route.save();
 
         res.status(200).json({
@@ -486,6 +487,51 @@ exports.generateQRCode = async (req, res, next) => {
             status: 'success',
             data: {
                 qrCode
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Récupère tous les itinéraires
+ * @route GET /api/routes/all
+ */
+exports.getAllRoutes = async (req, res, next) => {
+    try {
+        // Options de filtrage et de tri
+        const { favorite, sort, limit, offset } = req.query;
+
+        // Construire les conditions de recherche
+        const where = {};
+
+        if (favorite === 'true') {
+            where.isFavorite = true;
+        }
+
+        // Construire les options de tri
+        let order = [['createdAt', 'DESC']];
+
+        if (sort === 'name') {
+            order = [['name', 'ASC']];
+        } else if (sort === 'lastUsed') {
+            order = [['lastUsed', 'DESC']];
+        }
+
+        // Récupérer les itinéraires
+        const routes = await Route.findAndCountAll({
+            where,
+            order,
+            limit: limit ? parseInt(limit) : undefined,
+            offset: offset ? parseInt(offset) : undefined
+        });
+
+        res.status(200).json({
+            status: 'success',
+            results: routes.count,
+            data: {
+                routes: routes.rows
             }
         });
     } catch (error) {

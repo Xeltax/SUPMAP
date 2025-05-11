@@ -53,7 +53,7 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
                             <Flex direction={{ base: 'column', md: 'row' }} align="center" justify="space-between">
                                 <Box>
                                     <Heading size="lg" mb={2}>Bienvenue, {userData.username} 👋</Heading>
-                                    <Text color="gray.500">Voici le résumé de votre activité Trafine</Text>
+                                    <Text color="gray.500">Voici le résumé de votre activité Supmap</Text>
                                 </Box>
                                 <Button
                                     as={NextLink}

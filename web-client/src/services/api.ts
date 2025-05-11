@@ -189,7 +189,12 @@ const api = {
         generateQRCode: async (id: string): Promise<ApiResponse<{ qrCode: string }>> => {
             const response = await apiClient.get<ApiResponse<{ qrCode: string }>>(`/api/navigation/routes/qrcode/${id}`);
             return response.data;
-        }
+        },
+
+        getAllRoutes: async (options?: { favorite?: boolean; sort?: string; limit?: number; offset?: number }): Promise<ApiResponse<{ routes: any[] }>> => {
+            const response = await apiClient.get<ApiResponse<{ routes: any[] }>>('/api/navigation/routes/all', { params: options });
+            return response.data;
+        },
     },
 
     // Trafic et incidents

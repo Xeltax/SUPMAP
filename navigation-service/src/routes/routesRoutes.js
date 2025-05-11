@@ -4,6 +4,13 @@ const routesController = require('../controllers/routesController');
 const router = express.Router();
 
 /**
+ * @route GET /api/routes/all
+ * @desc Récupère tous les itinéraires
+ * @access Privé
+ */
+router.get('/all', routesController.getAllRoutes);
+
+/**
  * @route POST /api/routes/calculate
  * @desc Calcule un itinéraire entre deux points
  * @access Privé

@@ -44,7 +44,7 @@ import {
     Switch,
     FormHelperText
 } from '@chakra-ui/react';
-import { FiMoreVertical, FiSearch, FiEdit, FiTrash2, FiUserPlus, FiEye, FiLock, FiCheck, FiX } from 'react-icons/fi';
+import { FiMoreVertical, FiSearch, FiEdit, FiTrash2, FiUserPlus, FiEye, FiLock, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import AdminLayout from '@/components/AdminLayout';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -61,11 +61,13 @@ interface User {
     lastLogin?: string;
     routesCount: number;
     incidentsCount: number;
+    totalRouteUsage: number;
 }
 
 const UsersPage = ({ initialUsers }: { initialUsers: User[] }) => {
     const [users, setUsers] = useState<User[]>(initialUsers);
     const [filteredUsers, setFilteredUsers] = useState<User[]>(initialUsers);
+    const [displayCount, setDisplayCount] = useState(100);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -273,80 +275,87 @@ const UsersPage = ({ initialUsers }: { initialUsers: User[] }) => {
                                         <Th>Statut</Th>
                                         <Th>Date d'inscription</Th>
                                         <Th isNumeric>Routes</Th>
+                                        <Th isNumeric>Utilisations</Th>
                                         <Th isNumeric>Incidents</Th>
                                         <Th>Actions</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>
-                                    {filteredUsers.length > 0 ? (
-                                        filteredUsers.map((user) => (
-                                            <Tr key={user.id}>
-                                                <Td>
-                                                    <Flex align="center">
-                                                        <Avatar
-                                                            size="sm"
-                                                            name={user.username}
-                                                            mr={2}
-                                                            bg="blue.500"
-                                                            color="white"
-                                                        />
-                                                        <Text fontWeight="medium">{user.username}</Text>
-                                                    </Flex>
-                                                </Td>
-                                                <Td>{user.email}</Td>
-                                                <Td>
-                                                    <Tag
+                                    {filteredUsers.slice(0, displayCount).map((user) => (
+                                        <Tr key={user.id}>
+                                            <Td>
+                                                <Flex align="center">
+                                                    <Avatar
                                                         size="sm"
-                                                        colorScheme={user.role === 'admin' ? 'purple' : user.role === 'moderator' ? 'blue' : 'gray'}
-                                                    >
-                                                        {user.role}
-                                                    </Tag>
-                                                </Td>
-                                                <Td>
-                                                    <Flex align="center">
-                                                        <Badge mr={2} colorScheme={getActiveColor(user.active)}>
-                                                            {user.active ? 'Actif' : 'Inactif'}
-                                                        </Badge>
-                                                    </Flex>
-                                                </Td>
-                                                <Td>{formatDate(user.createdAt)}</Td>
-                                                <Td isNumeric>{user.routesCount}</Td>
-                                                <Td isNumeric>{user.incidentsCount}</Td>
-                                                <Td>
-                                                    <Menu>
-                                                        <MenuButton
-                                                            as={IconButton}
-                                                            icon={<FiMoreVertical />}
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            aria-label="Actions"
-                                                        />
-                                                        <MenuList>
-                                                            <MenuItem icon={<FiEdit />} onClick={() => handleEditUser(user)}>
-                                                                Modifier
-                                                            </MenuItem>
-                                                            <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => handleDeleteUser(user)}>
-                                                                Supprimer
-                                                            </MenuItem>
-                                                        </MenuList>
-                                                    </Menu>
-                                                </Td>
-                                            </Tr>
-                                        ))
-                                    ) : (
-                                        <Tr>
-                                            <Td colSpan={8} textAlign="center" py={10}>
-                                                <Text color="gray.500">Aucun utilisateur trouvé</Text>
+                                                        name={user.username}
+                                                        mr={2}
+                                                        bg="blue.500"
+                                                        color="white"
+                                                    />
+                                                    <Text fontWeight="medium">{user.username}</Text>
+                                                </Flex>
+                                            </Td>
+                                            <Td>{user.email}</Td>
+                                            <Td>
+                                                <Tag
+                                                    size="sm"
+                                                    colorScheme={user.role === 'admin' ? 'purple' : user.role === 'moderator' ? 'blue' : 'gray'}
+                                                >
+                                                    {user.role}
+                                                </Tag>
+                                            </Td>
+                                            <Td>
+                                                <Flex align="center">
+                                                    <Badge mr={2} colorScheme={getActiveColor(user.active)}>
+                                                        {user.active ? 'Actif' : 'Inactif'}
+                                                    </Badge>
+                                                </Flex>
+                                            </Td>
+                                            <Td>{formatDate(user.createdAt)}</Td>
+                                            <Td isNumeric>{user.routesCount}</Td>
+                                            <Td isNumeric>{user.totalRouteUsage}</Td>
+                                            <Td isNumeric>{user.incidentsCount}</Td>
+                                            <Td>
+                                                <Menu>
+                                                    <MenuButton
+                                                        as={IconButton}
+                                                        icon={<FiMoreVertical />}
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        aria-label="Actions"
+                                                    />
+                                                    <MenuList>
+                                                        <MenuItem icon={<FiEdit />} onClick={() => handleEditUser(user)}>
+                                                            Modifier
+                                                        </MenuItem>
+                                                        <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => handleDeleteUser(user)}>
+                                                            Supprimer
+                                                        </MenuItem>
+                                                    </MenuList>
+                                                </Menu>
                                             </Td>
                                         </Tr>
-                                    )}
+                                    ))}
                                 </Tbody>
                             </Table>
                         </TableContainer>
 
-                        <Text mt={4} color="gray.500" fontSize="sm">
-                            {filteredUsers.length} utilisateur{filteredUsers.length !== 1 ? 's' : ''} trouvé{filteredUsers.length !== 1 ? 's' : ''}
-                        </Text>
+                        <Flex justify="space-between" align="center" mt={4}>
+                            <Text color="gray.500" fontSize="sm">
+                                {filteredUsers.slice(0, displayCount).length} utilisateur{filteredUsers.slice(0, displayCount).length !== 1 ? 's' : ''} affiché{filteredUsers.slice(0, displayCount).length !== 1 ? 's' : ''} sur {filteredUsers.length}
+                            </Text>
+                            
+                            {displayCount < filteredUsers.length && (
+                                <Button
+                                    onClick={() => setDisplayCount(prev => prev + 100)}
+                                    colorScheme="blue"
+                                    variant="outline"
+                                    leftIcon={<FiRefreshCw />}
+                                >
+                                    Charger plus d'utilisateurs
+                                </Button>
+                            )}
+                        </Flex>
                     </>
                 )}
 
@@ -510,17 +519,41 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        const response = await axios.get(`${process.env.API_URL}/api/auth/users`, config);
+        // Fetch users, routes, and incidents
+        const [usersResponse, routesResponse, incidentsResponse] = await Promise.all([
+            axios.get(`${process.env.API_URL}/api/auth/users`, config),
+            axios.get(`${process.env.API_URL}/api/navigation/routes/all`, config),
+            axios.get(`${process.env.API_URL}/api/navigation/traffic/reports`, config)
+        ]);
 
-        if (response.data.status === 'success') {
+        const users = usersResponse.data.data.users;
+        const routes = routesResponse.data.data.routes;
+        const incidents = incidentsResponse.data.data.incidents;
+
+        // Add route and incident counts to each user
+        const usersWithStats = users.map((user: any) => {
+            const userRoutes = routes.filter((route: any) => route.userId === user.id);
+            const userIncidents = incidents.filter((incident: any) => incident.userId === user.id);
+            
+            // Calculer l'utilisation totale des itinéraires
+            const totalRouteUsage = userRoutes.reduce((total: number, route: any) => total + (route.usageCount || 0), 0);
+            
+            return {
+                ...user,
+                routesCount: userRoutes.length,
+                incidentsCount: userIncidents.length,
+                totalRouteUsage
+            };
+        });
+
+        if (usersResponse.data.status === 'success') {
             return {
                 props: {
-                    initialUsers: response.data.data.users || []
+                    initialUsers: usersWithStats || []
                 },
             };
         }

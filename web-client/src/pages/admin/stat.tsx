@@ -1357,8 +1357,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
             // Calculate active users for this month
             const monthActiveUsers = new Set([
-                ...monthRoutes.map(route => route.userId),
-                ...monthIncidents.filter(incident => incident.username !== 'Utilisateur inconnu').map(incident => incident.userId)
+                ...monthRoutes.filter(route => {
+                    const routeDate = new Date(route.createdAt);
+                    const now = new Date();
+                    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                    return routeDate >= thirtyDaysAgo && routeDate <= now && users.some(user => user.id === route.userId);
+                }).map(route => route.userId),
+                ...monthIncidents.filter(incident => {
+                    const incidentDate = new Date(incident.createdAt);
+                    const now = new Date();
+                    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                    return incidentDate >= thirtyDaysAgo && incidentDate <= now && 
+                           incident.username !== 'Utilisateur inconnu' && 
+                           users.some(user => user.id === incident.userId);
+                }).map(incident => incident.userId)
             ]).size;
 
             // Calculate route types for this month

@@ -233,10 +233,6 @@ const DesktopNav = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
                     },
                 ],
             },
-            {
-                label: 'À propos',
-                href: '/about',
-            },
         ];
 
     return (

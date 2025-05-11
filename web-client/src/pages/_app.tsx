@@ -23,7 +23,7 @@ export default function App({ Component, pageProps }: AppProps) {
             <QueryClientProvider client={queryClient}>
                 <AuthProvider>
                     <Head>
-                        <title>Trafine - Navigation en temps réel</title>
+                        <title>Supmap - Navigation en temps réel</title>
                         <meta name="description" content="Application de navigation en temps réel avec signalements d'incidents de trafic" />
                         <meta name="viewport" content="width=device-width, initial-scale=1" />
                         <link rel="icon" href="/favicon.ico" />

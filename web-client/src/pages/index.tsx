@@ -63,7 +63,7 @@ export default function Home() {
                             </Text>
                         </Heading>
                         <Text maxW={'2xl'} fontSize={'xl'}>
-                            Trafine vous permet de naviguer en France avec des informations en temps réel sur la circulation,
+                            Supmap vous permet de naviguer en France avec des informations en temps réel sur la circulation,
                             les accidents et les obstacles. Contribuez à la communauté en signalant des incidents et recevez
                             des itinéraires optimisés en fonction des conditions de trafic.
                         </Text>

@@ -89,7 +89,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                             fontSize={'xl'}
                             color={useColorModeValue('blue.600', 'blue.300')}
                         >
-                            Trafine
+                            Supmap
                         </Text>
                     </Link>
 

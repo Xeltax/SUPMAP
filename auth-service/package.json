@@ -1,7 +1,7 @@
 {
   "name": "auth-service",
   "version": "1.0.0",
-  "description": "Service d'authentification pour l'application Trafine",
+  "description": "Service d'authentification pour l'application Supmap",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

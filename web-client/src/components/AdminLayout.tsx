@@ -1,4 +1,3 @@
-// components/admin/AdminLayout.tsx
 import React, { ReactNode } from 'react';
 import {
     Box,
@@ -73,8 +72,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <SidebarContent onClose={onClose} />
                 </DrawerContent>
             </Drawer>
-            {/* mobilenav */}
-            {/*<MobileNav onOpen={onOpen} />*/}
             <Box ml={{ base: 0, md: 60 }} p="4">
                 {children}
             </Box>

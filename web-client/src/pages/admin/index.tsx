@@ -1,4 +1,3 @@
-// pages/admin/index.tsx
 import React, { useEffect, useState } from 'react';
 import { GetServerSideProps } from 'next';
 import {
@@ -27,7 +26,6 @@ import AdminLayout from '@/components/AdminLayout';
 import axios from 'axios';
 import api from '@/services/api';
 
-// Types pour les statistiques d'administration
 interface AdminDashboardStats {
     totalUsers: number;
     activeUsers: number;
@@ -39,7 +37,6 @@ interface AdminDashboardStats {
     incidentsLastWeek: number;
 }
 
-// Types pour les données récentes
 interface RecentData {
     recentUsers: any[];
     recentRoutes: any[];
@@ -63,14 +60,12 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
         incidents: 100
     });
 
-    // Couleurs pour le mode clair/sombre
     const cardBg = useColorModeValue('white', 'gray.800');
     const statCardBg = useColorModeValue('blue.50', 'blue.900');
     const statCardUsers = useColorModeValue('green.50', 'green.900');
     const statCardRoutes = useColorModeValue('purple.50', 'purple.900');
     const statCardIncidents = useColorModeValue('orange.50', 'orange.900');
 
-    // Formater la date
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return new Intl.DateTimeFormat('fr-FR', {
@@ -332,11 +327,9 @@ const AdminDashboard = ({ initialStats, initialRecentData }: {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -410,7 +403,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -420,7 +412,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher le dashboard avec des données vides
         return {
             props: {
                 initialStats: {

@@ -8,7 +8,6 @@ const User = require('../models/userModel');
  * @param {Object} passport - L'instance Passport.js
  */
 const setupPassport = (passport) => {
-    // Configuration de la stratégie JWT
     const jwtOptions = {
         jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
         secretOrKey: process.env.JWT_SECRET
@@ -31,7 +30,6 @@ const setupPassport = (passport) => {
         })
     );
 
-    // Configuration de la stratégie Google OAuth2
     if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         passport.use(
             new GoogleStrategy(
@@ -43,7 +41,6 @@ const setupPassport = (passport) => {
                 },
                 async (accessToken, refreshToken, profile, done) => {
                     try {
-                        // Vérifier si l'utilisateur existe déjà
                         let user = await User.findOne({
                             $or: [
                                 { oauthId: profile.id, oauthProvider: 'google' },
@@ -52,14 +49,12 @@ const setupPassport = (passport) => {
                         });
 
                         if (user) {
-                            // Si l'utilisateur existe mais n'a pas d'oauthId, mettre à jour avec l'ID Google
                             if (!user.oauthId) {
                                 user.oauthId = profile.id;
                                 user.oauthProvider = 'google';
                                 await user.save();
                             }
                         } else {
-                            // Créer un nouvel utilisateur
                             user = await User.create({
                                 email: profile.emails[0].value,
                                 username: `google_${profile.id}`,

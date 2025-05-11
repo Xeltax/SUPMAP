@@ -21,13 +21,12 @@ const seedUsers = async () => {
         await User.create({
             username: 'admin',
             email: 'admin@trafine.fr',
-            password: 'password123', // Sera haché automatiquement grâce au middleware pre-save
+            password: 'password123',
             role: 'admin',
             active: true,
             emailVerified: true
         });
 
-        // Création d'un modérateur
         await User.create({
             username: 'moderateur',
             email: 'moderateur@trafine.fr',
@@ -37,7 +36,6 @@ const seedUsers = async () => {
             emailVerified: true
         });
 
-        // Création d'un utilisateur standard
         await User.create({
             username: 'utilisateur',
             email: 'utilisateur@trafine.fr',

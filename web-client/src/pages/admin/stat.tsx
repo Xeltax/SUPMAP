@@ -1,4 +1,3 @@
-// pages/admin/stats.tsx
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import {
@@ -132,7 +131,6 @@ interface Incident {
     isVerified: boolean;
 }
 
-// Types pour les statistiques générales
 interface GeneralStats {
     totalUsers: number;
     activeUsers: number;
@@ -147,7 +145,6 @@ interface GeneralStats {
     incidentsGrowthRate: number;
 }
 
-// Types pour les données mensuelles
 interface MonthlyData {
     month: string;
     users: number;
@@ -174,7 +171,6 @@ interface MonthlyData {
     };
 }
 
-// Types pour les statistiques d'utilisation
 interface UsageStats {
     activeUsersLast30Days: number;
     averageRoutesPerUser: number;
@@ -186,7 +182,6 @@ interface UsageStats {
     incidentTypeDistribution: { type: string; count: number; percentage: number }[];
 }
 
-// Types pour les données de la page
 interface StatsPageProps {
     generalStats: GeneralStats;
     usageStats: UsageStats;
@@ -204,7 +199,6 @@ interface UserStats {
     lastLogin: string;
 }
 
-// Composant principal
 const StatsPage = ({
                        generalStats,
                        usageStats,
@@ -215,7 +209,6 @@ const StatsPage = ({
                    }: StatsPageProps) => {
     const [loading, setLoading] = useState<boolean>(false);
 
-    // Couleurs adaptives pour le mode clair/sombre
     const cardBg = useColorModeValue('white', 'gray.800');
     const borderColor = useColorModeValue('gray.200', 'gray.700');
     const statBg = useColorModeValue('blue.50', 'blue.900');
@@ -251,12 +244,10 @@ const StatsPage = ({
         }
     };
 
-    // Formater le nombre avec un séparateur de milliers
     const formatNumber = (num: number) => {
         return new Intl.NumberFormat('fr-FR').format(num);
     };
 
-    // Formater la date
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return new Intl.DateTimeFormat('fr-FR', {
@@ -266,7 +257,6 @@ const StatsPage = ({
         }).format(date);
     };
 
-    // Rafraîchir les données
     const handleRefresh = () => {
         setLoading(true);
         // Simuler une actualisation des données
@@ -275,13 +265,11 @@ const StatsPage = ({
         }, 1500);
     };
 
-    // Exporter les données en CSV (exemple fictif)
     const handleExportData = () => {
         // Implémentation réelle : génération d'un fichier CSV
         alert('Export de données en CSV (fonctionnalité à implémenter)');
     };
 
-    // Configuration des graphiques
     const monthlyEvolutionOptions = {
         responsive: true,
         plugins: {
@@ -1098,7 +1086,6 @@ const StatCard = ({ label, value, helpText, icon, change, colorScheme }: StatCar
     );
 };
 
-// Composant pour les statistiques d'utilisation
 interface UsageStatProps {
     label: string;
     value: string | number;
@@ -1128,11 +1115,9 @@ const UsageStat = ({ label, value, icon }: UsageStatProps) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -1143,12 +1128,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Fetch all data in parallel
         const [incidentsResponse, usersResponse, routesResponse] = await Promise.all([
             axios.get(`${process.env.API_URL}/api/navigation/traffic/reports`, config),
             axios.get(`${process.env.API_URL}/api/auth/users`, config),
@@ -1159,7 +1142,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const users: User[] = usersResponse.data.data.users;
         const routes: Route[] = routesResponse.data.data.routes;
 
-        // Add username to each incident
         const incidentsWithUsers = incidents.map(incident => {
             const user = users.find(u => u.id === incident.userId);
             return {
@@ -1168,7 +1150,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Add username to each route
         const routesWithUsers = routes.map(route => {
             const user = users.find(u => u.id === route.userId);
             return {
@@ -1177,7 +1158,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Get top 10 routes and incidents
         const topRoutes = routesWithUsers
             .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
             .slice(0, 10);
@@ -1186,7 +1166,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 10);
 
-        // Calculate route statistics
         const totalRoutes = routes.length;
         const newRoutesThisMonth = routes.filter(route => {
             const routeDate = new Date(route.createdAt);
@@ -1195,7 +1174,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                    routeDate.getFullYear() === now.getFullYear();
         }).length;
 
-        // Calculate route type distribution
         const routeTypes = Array.from(new Set(routes.map(route => route.routeType)));
         const routeTypeDistribution = routeTypes.map(type => {
             const count = routes.filter(route => route.routeType === type).length;
@@ -1206,7 +1184,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Calculate incident statistics
         const totalIncidents = incidentsWithUsers.length;
         const activeIncidents = incidentsWithUsers.filter(incident => incident.active).length;
         const newIncidentsThisMonth = incidentsWithUsers.filter(incident => {
@@ -1216,7 +1193,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                    incidentDate.getFullYear() === now.getFullYear();
         }).length;
 
-        // Calculate incident type distribution
         const incidentTypes = Array.from(new Set(incidentsWithUsers.map(incident => incident.incidentType)));
         const incidentTypeDistribution = incidentTypes.map(type => {
             const count = incidentsWithUsers.filter(incident => incident.incidentType === type).length;
@@ -1227,7 +1203,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Calculate user statistics
         const totalUsers = users.length;
         const newUsersThisMonth = users.filter((user: User) => {
             const userDate = new Date(user.createdAt);
@@ -1236,7 +1211,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                    userDate.getFullYear() === now.getFullYear();
         }).length;
 
-        // Calculate active users
         const activeUsers = new Set([
             ...routes.filter(route => {
                 const routeDate = new Date(route.createdAt);
@@ -1254,7 +1228,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             }).map(incident => incident.userId)
         ]).size;
 
-        // Calculate growth rates
         const lastMonthUsers = users.filter((user: User) => {
             const userDate = new Date(user.createdAt);
             const now = new Date();
@@ -1288,7 +1261,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             ? ((newIncidentsThisMonth - lastMonthIncidents) / lastMonthIncidents) * 100 
             : 0;
 
-        // Prepare top users data
         const topUsers = users.map((user: User) => {
             const userRoutes = routes.filter((route: Route) => route.userId === user.id);
             const userIncidents = incidentsWithUsers.filter((incident: Incident) => 
@@ -1304,7 +1276,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }).sort((a: UserStats, b: UserStats) => (b.routesCount + b.incidentsCount) - (a.routesCount + a.incidentsCount))
           .slice(0, 10);
 
-        // General statistics
         const generalStats: GeneralStats = {
             totalUsers,
             activeUsers,
@@ -1319,7 +1290,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             incidentsGrowthRate
         };
 
-        // Usage statistics
         const usageStats: UsageStats = {
             activeUsersLast30Days: activeUsers,
             averageRoutesPerUser: totalRoutes / totalUsers,
@@ -1331,7 +1301,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             incidentTypeDistribution
         };
 
-        // Generate monthly data from existing data
         const now = new Date();
         const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1); // 12 derniers mois
         const monthlyData = Array.from({ length: 12 }, (_, i) => {
@@ -1339,7 +1308,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
             const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
 
-            // Filter data for this month
             const cumulativeUsers = users.filter(user => {
                 const userDate = new Date(user.createdAt);
                 return userDate <= monthEnd;
@@ -1355,7 +1323,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 return incidentDate >= monthStart && incidentDate <= monthEnd;
             });
 
-            // Calculate active users for this month
             const monthActiveUsers = new Set([
                 ...monthRoutes.filter(route => {
                     const routeDate = new Date(route.createdAt);
@@ -1373,7 +1340,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 }).map(incident => incident.userId)
             ]).size;
 
-            // Calculate route types for this month
             const routeTypes = {
                 fastest: monthRoutes.filter(route => route.routeType === 'fastest').length,
                 shortest: monthRoutes.filter(route => route.routeType === 'shortest').length,
@@ -1381,7 +1347,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 thrilling: monthRoutes.filter(route => route.routeType === 'thrilling').length,
             };
 
-            // Calculate incident types for this month
             const incidentTypes = {
                 accident: monthIncidents.filter(incident => incident.incidentType === 'accident').length,
                 construction: monthIncidents.filter(incident => incident.incidentType === 'roadworks').length,
@@ -1389,7 +1354,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 other: monthIncidents.filter(incident => !['accident', 'roadworks', 'roadClosed'].includes(incident.incidentType)).length,
             };
 
-            // Calculate incident severity for this month
             const incidentSeverity = {
                 low: monthIncidents.filter(incident => incident.severity === 'low').length,
                 medium: monthIncidents.filter(incident => incident.severity === 'moderate').length,
@@ -1422,7 +1386,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des statistiques:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -1432,7 +1395,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher une page avec des données vides
         return {
             props: {
                 generalStats: {

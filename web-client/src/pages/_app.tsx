@@ -7,7 +7,6 @@ import Layout from '@/components/Layout';
 import '@/styles/globals.css';
 import Head from 'next/head';
 
-// Créer une instance de QueryClient (React Query)
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {

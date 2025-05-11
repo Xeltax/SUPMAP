@@ -50,7 +50,7 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import api from '@/services/api';
 
-// Types pour les utilisateurs
+
 interface User {
     id: string | number;
     username: string;
@@ -134,11 +134,9 @@ const UsersPage = ({ initialUsers }: { initialUsers: User[] }) => {
 
         setLoading(true);
         try {
-            // Appel API pour mettre à jour l'utilisateur
             const response = await api.auth.updateById(selectedUser.id as string, userData);
 
             if (response && response.data) {
-                // Mettre à jour l'utilisateur dans la liste
                 const updatedUsers = users.map(user =>
                     user.id === selectedUser.id ? { ...user, ...userData } : user
                 );
@@ -504,11 +502,9 @@ const EditUserForm = ({ user, onSave, isLoading, onCancel }: EditUserFormProps) 
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -523,7 +519,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Fetch users, routes, and incidents
         const [usersResponse, routesResponse, incidentsResponse] = await Promise.all([
             axios.get(`${process.env.API_URL}/api/auth/users`, config),
             axios.get(`${process.env.API_URL}/api/navigation/routes/all`, config),
@@ -534,12 +529,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const routes = routesResponse.data.data.routes;
         const incidents = incidentsResponse.data.data.incidents;
 
-        // Add route and incident counts to each user
         const usersWithStats = users.map((user: any) => {
             const userRoutes = routes.filter((route: any) => route.userId === user.id);
             const userIncidents = incidents.filter((incident: any) => incident.userId === user.id);
-            
-            // Calculer l'utilisation totale des itinéraires
+
             const totalRouteUsage = userRoutes.reduce((total: number, route: any) => total + (route.usageCount || 0), 0);
             
             return {
@@ -566,7 +559,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des utilisateurs:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -576,7 +568,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher une page avec une liste vide
         return {
             props: {
                 initialUsers: []

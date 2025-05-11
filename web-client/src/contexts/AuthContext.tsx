@@ -57,7 +57,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 try {
                     setUser(JSON.parse(storedUser));
 
-                    // Vérifier que le token est toujours valide
                     const response = await api.auth.getProfile();
                     setUser(response.data?.user);
                 } catch (error) {
@@ -78,7 +77,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const handleOAuthLogin = async (token: string) => {
         setIsLoading(true);
         try {
-            // Décoder le token pour obtenir les informations utilisateur
             const payload = JSON.parse(atob(token.split('.')[1]));
 
             const user = {
@@ -89,15 +87,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 profilePicture: payload.profilePicture || ''
             };
 
-            // Stocker le token et l'utilisateur dans les cookies
             Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
             Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
 
-            // Mettre à jour l'état
             setToken(token);
             setUser(user);
 
-            // Rediriger vers le dashboard
             router.push('/dashboard');
         } catch (error) {
             console.error('Erreur lors de la connexion OAuth:', error);
@@ -115,7 +110,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (response.data) {
                 const { token, user } = response.data;
 
-                // Stocker les informations dans les cookies
                 Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
                 Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
 
@@ -139,7 +133,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (response.data) {
                 const { token, user } = response.data;
 
-                // Stocker les informations dans les cookies
                 Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
                 Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
 
@@ -162,7 +155,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
             console.error('Erreur lors de la déconnexion:', error);
         } finally {
-            // Supprimer les cookies
             Cookies.remove('token');
             Cookies.remove('user');
 
@@ -180,7 +172,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             if (response.data?.user) {
                 setUser(response.data.user);
-                // Mettre à jour le cookie user
                 Cookies.set('user', JSON.stringify(response.data.user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
             }
         } catch (error) {
@@ -199,7 +190,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (response.data) {
                 const { token, user } = response.data;
 
-                // Mettre à jour les cookies
                 Cookies.set('token', token, { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
                 Cookies.set('user', JSON.stringify(user), { expires: COOKIE_EXPIRY, secure: process.env.NODE_ENV === 'production' });
 

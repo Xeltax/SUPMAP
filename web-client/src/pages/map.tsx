@@ -101,31 +101,25 @@ interface RouteInfo {
 }
 
 const Map = ({ apiKey }: MapPageProps) => {
-    // Hooks de contexte
     const { isAuthenticated, user } = useAuth();
     const toast = useToast();
 
-    // Hooks de Chakra UI pour les couleurs et styles
     const bgColor = useColorModeValue('white', 'gray.800');
     const bgColorSecondary = useColorModeValue('gray.50', 'gray.700');
     const primaryColor = useColorModeValue('blue.500', 'blue.300');
     const mapStyle = useColorModeValue('basic-main', 'basic-night');
     const currentMapStyle = useColorModeValue('basic-main', 'basic-night');
 
-    // Références
     const mapContainerRef = useRef<HTMLDivElement>(null);
 
-    // États relatifs à la carte
     const [map, setMap] = useState<any>(null);
     const [ttObject, setTtObject] = useState<any>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
-    // États relatifs à la recherche
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Location[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    // États relatifs à l'itinéraire
     const [startLocation, setStartLocation] = useState<Location | null>(null);
     const [endLocation, setEndLocation] = useState<Location | null>(null);
     const [startMarker, setStartMarker] = useState<any>(null);
@@ -137,7 +131,6 @@ const Map = ({ apiKey }: MapPageProps) => {
     const [routeType, setRouteType] = useState('fastest');
     const [incidents, setIncidents] = useState<any[]>([]);
 
-    // États relatifs au incident
     const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
     const [incidentLocation, setIncidentLocation] = useState<[number, number] | null>(null);
     const [incidentType, setIncidentType] = useState<string>('accident');
@@ -146,39 +139,32 @@ const Map = ({ apiKey }: MapPageProps) => {
     const [incidentDuration, setIncidentDuration] = useState<number>(60);
     const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
 
-    // Hooks pour les drawers et modals
     const { isOpen: isRouteDrawerOpen, onOpen: onRouteDrawerOpen, onClose: onRouteDrawerClose } = useDisclosure();
     const { isOpen: isSaveModalOpen, onOpen: onSaveModalOpen, onClose: onSaveModalClose } = useDisclosure();
 
-    // État pour sauvegarde d'itinéraire
     const [routeName, setRouteName] = useState('');
     const [isFavorite, setIsFavorite] = useState(false);
 
-    // Constantes
     const routeColor = 'blue';
     const startMarkerColor = '#28a745';
     const endMarkerColor = '#dc3545';
     const router = useRouter();
 
-    // Initialiser la carte TomTom
     useEffect(() => {
         if (mapContainerRef.current && !map && typeof window !== 'undefined') {
-            // Dynamiquement importer le SDK TomTom
             import('@tomtom-international/web-sdk-maps').then(tt => {
                 console.log('TomTom SDK loaded');
 
-                // Sauvegarder l'objet TomTom pour une utilisation ultérieure
                 setTtObject(tt);
 
                 const ttMap = tt.map({
                     key: apiKey,
                     container: mapContainerRef.current!,
-                    center: [2.3522, 46.8566], // Centre de la France
+                    center: [2.3522, 46.8566],
                     zoom: 5,
                     language: 'fr-FR',
                 });
 
-                // Ajouter les contrôles à la carte
                 ttMap.addControl(new tt.NavigationControl());
                 ttMap.addControl(new tt.FullscreenControl());
                 ttMap.addControl(new tt.GeolocateControl({
@@ -190,7 +176,6 @@ const Map = ({ apiKey }: MapPageProps) => {
 
                 setMap(ttMap);
 
-                // Nettoyer la carte lors du démontage du composant
                 return () => {
                     ttMap.remove();
                 };
@@ -207,19 +192,14 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     }, [apiKey, mapStyle, toast]);
 
-    // Configurer le clic sur la carte pour le mode itinéraire
     useEffect(() => {
         if (!map || !ttObject) return;
 
-        // Fonction de gestion du clic
         const handleMapClick = (e: any) => {
-            // Récupérer les coordonnées du clic
             const coords = e.lngLat;
             const clickedCoords: [number, number] = [coords.lng, coords.lat];
 
             if (isRoutingMode) {
-                // Mode itinéraire
-                // Convertir les coordonnées en adresse (reverse geocoding)
                 import('@tomtom-international/web-sdk-services').then(ttServices => {
                     const reverseGeocodingOptions = {
                         key: apiKey,
@@ -240,13 +220,11 @@ const Map = ({ apiKey }: MapPageProps) => {
                                     }
                                 };
 
-                                // Utiliser l'étape actuelle pour déterminer où placer le point
                                 if (routingStep === 'start') {
                                     setStartMarkerOnMap(location);
                                     setRoutingStep('end');
                                 } else {
                                     setEndMarkerOnMap(location);
-                                    // Rester sur l'étape end pour permettre de changer la destination
                                 }
                             }
                         })
@@ -262,8 +240,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                         });
                 });
             } else {
-                // Si non en mode routage, proposer d'ajouter un incident à cet endroit
-                // Afficher un petit popup de confirmation
                 const popupContent = `
                 <div style="text-align: center; padding: 5px; color: black;">
                     <h4>Signaler un incident ici?</h4>
@@ -278,7 +254,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                     .setHTML(popupContent)
                     .addTo(map);
 
-                // Ajouter un écouteur d'événement au bouton dans le popup
                 setTimeout(() => {
                     const reportButton = document.getElementById('report-incident-btn');
                     if (reportButton) {
@@ -291,11 +266,9 @@ const Map = ({ apiKey }: MapPageProps) => {
             }
         };
 
-        // Supprimer l'ancien écouteur et ajouter le nouveau
         map.off('click');
         map.on('click', handleMapClick);
 
-        // Nettoyage à la désactivation
         return () => {
             if (map) {
                 map.off('click', handleMapClick);
@@ -303,7 +276,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         };
     }, [map, ttObject, isRoutingMode, routingStep, apiKey, toast]);
 
-    // Géolocaliser l'utilisateur au chargement
     useEffect(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -331,7 +303,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     }, [map]);
 
-    // Set l'itinéraire si id de la route en paramètre
     useEffect(() => {
         if (map && router.query.route) {
             const routeId = router.query.route as string;
@@ -357,9 +328,7 @@ const Map = ({ apiKey }: MapPageProps) => {
                 const tracedRoute : any = calculatedRoute.data?.routes;
                 setCurrentRoute(tracedRoute[0]);
 
-                // Afficher l'itinéraire sur la carte
                 if (map && ttObject) {
-                    // Supprimer les itinéraires existants
                     if (map.getLayer('route')) {
                         map.removeLayer('route');
                     }
@@ -367,7 +336,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                         map.removeSource('route');
                     }
 
-                    // Créer une ligne à partir des points de l'itinéraire
                     const routePoints: any = [];
                     for (const leg of tracedRoute) {
                         for (const legs of leg.legs) {
@@ -419,7 +387,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     }
 
-    // Rechercher des lieux
     const searchLocations = async () => {
         if (!searchQuery) return;
 
@@ -443,16 +410,13 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     };
 
-    // Fonction pour placer le marqueur de départ sur la carte
     const setStartMarkerOnMap = (location: Location) => {
         if (!map || !ttObject) return;
 
-        // Supprimer le marqueur existant s'il y en a un
         if (startMarker) {
             startMarker.remove();
         }
 
-        // Créer le nouveau marqueur
         const markerElement = document.createElement('div');
         markerElement.className = 'start-marker';
         markerElement.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="${startMarkerColor}">
@@ -463,18 +427,15 @@ const Map = ({ apiKey }: MapPageProps) => {
             .setLngLat([location.position.lon, location.position.lat])
             .addTo(map);
 
-        // Mettre à jour l'état
         setStartMarker(marker);
         setStartLocation(location);
 
-        // Ajuster la vue pour voir le point
         map.flyTo({
             center: [location.position.lon, location.position.lat],
             zoom: 13
         });
     };
 
-    // Fonction pour placer le marqueur de destination sur la carte
     const setEndMarkerOnMap = (location: Location) => {
         if (!map || !ttObject) return;
 
@@ -487,7 +448,6 @@ const Map = ({ apiKey }: MapPageProps) => {
             });
         }
 
-        // Créer le nouveau marqueur
         const markerElement = document.createElement('div');
         markerElement.className = 'end-marker';
         markerElement.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="${endMarkerColor}">
@@ -506,7 +466,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         calculateRouteWithLocations(startLocation, location);
     };
 
-    // Sélectionner un lieu à partir de la recherche
     const selectLocation = (location: Location) => {
         if (isRoutingMode) {
             if (routingStep === 'start') {
@@ -516,7 +475,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                 setEndMarkerOnMap(location);
             }
         } else {
-            // Si pas en mode itinéraire, juste centrer la carte sur le lieu
             if (map) {
                 map.flyTo({
                     center: [location.position.lon, location.position.lat],
@@ -525,12 +483,10 @@ const Map = ({ apiKey }: MapPageProps) => {
             }
         }
 
-        // Effacer les résultats de recherche
         setSearchResults([]);
         setSearchQuery('');
     };
 
-    // Calculer l'itinéraire
     const calculateRouteWithLocations = async (start: Location, end: Location) => {
         if (!start || !end || !map) {
             console.log("Can't calculate route: missing locations or map");
@@ -553,9 +509,7 @@ const Map = ({ apiKey }: MapPageProps) => {
                 const route = response.data.routes[0];
                 setCurrentRoute(route);
 
-                // Afficher l'itinéraire sur la carte
                 if (map && ttObject) {
-                    // Supprimer les itinéraires existants
                     if (map.getLayer('route')) {
                         map.removeLayer('route');
                     }
@@ -563,7 +517,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                         map.removeSource('route');
                     }
 
-                    // Créer une ligne à partir des points de l'itinéraire
                     const routePoints: any = [];
                     for (const leg of route.legs) {
                         for (const point of leg.points) {
@@ -571,15 +524,11 @@ const Map = ({ apiKey }: MapPageProps) => {
                         }
                     }
 
-                    // Solution plus fiable: toujours utiliser un événement 'idle'
-                    // Cet événement est déclenché lorsque la carte a terminé tous les rendus
                     const addRouteWhenReady = () => {
                         addRouteToMap(routePoints);
-                        // Nettoyer l'écouteur après son utilisation
                         map.off('idle', addRouteWhenReady);
                     };
 
-                    // S'assurer que nous attendons que la carte soit prête
                     if (map.isStyleLoaded()) {
                         addRouteToMap(routePoints);
                     } else {
@@ -587,7 +536,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                     }
                 }
 
-                // Ouvrir le panneau d'itinéraire
                 onRouteDrawerOpen();
             } else {
                 toast({
@@ -612,7 +560,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     };
 
-    // Fonction pour ajouter l'itinéraire à la carte
     const addRouteToMap = (routePoints: any) => {
         if (!map || !ttObject || !routePoints || routePoints.length === 0) return;
 
@@ -642,7 +589,6 @@ const Map = ({ apiKey }: MapPageProps) => {
             }
         });
 
-        // Ajuster la vue pour voir l'itinéraire complet
         const bounds = new ttObject.LngLatBounds();
         routePoints.forEach((point: any) => {
             bounds.extend(point);
@@ -651,7 +597,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         map.fitBounds(bounds, { padding: 60 });
     };
 
-    // Charger les incidents sur la carte
     const loadIncidents = async () => {
         if (!map || !ttObject) return;
 
@@ -672,7 +617,6 @@ const Map = ({ apiKey }: MapPageProps) => {
             // Charger les incidents signalés par les utilisateurs
             const userReportsResponse = await api.traffic.getUserReports({ bbox });
 
-            // Vérifier les réponses et combiner les incidents
             let tomtomIncidents: any[] = [];
             if (response && response.data && response.data.incidents) {
                 tomtomIncidents = response.data.incidents.incidents || [];
@@ -681,16 +625,13 @@ const Map = ({ apiKey }: MapPageProps) => {
             let userReports: Incident[] = [];
             if (userReportsResponse && userReportsResponse.data && userReportsResponse.data.incidents) {
                 userReports = userReportsResponse.data.incidents;
-                // Mettre à jour l'état des incidents de l'utilisateur
                 setUserIncidents(userReports.filter(incident =>
                     incident.userId === (user ? user.id : null)
                 ));
             }
 
-            // Combiner les incidents
             setIncidents([...tomtomIncidents, ...userReports]);
 
-            // Supprimer les marqueurs d'incidents existants
             const markersToRemove = document.querySelectorAll('.incident-marker');
             markersToRemove.forEach(marker => marker.remove());
 
@@ -701,13 +642,6 @@ const Map = ({ apiKey }: MapPageProps) => {
                     displayIncidentMarker(incident, false);
                 });
             }
-
-            // Afficher les incidents utilisateur
-            // if (userReports && Array.isArray(userReports)) {
-            //     userReports.forEach(incident => {
-            //         displayIncidentMarker(incident, true);
-            //     });
-            // }
         } catch (error) {
             console.error('Erreur lors du chargement des incidents:', error);
         }
@@ -871,7 +805,6 @@ const Map = ({ apiKey }: MapPageProps) => {
             IconComponent = FaExclamationCircle;
         }
 
-        // Générer l'icône SVG
         try {
             markerElement.innerHTML = renderToStaticMarkup(
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}>
@@ -880,7 +813,6 @@ const Map = ({ apiKey }: MapPageProps) => {
             );
         } catch (error) {
             console.error("Erreur lors du rendu de l'icône:", error);
-            // Fallback en cas d'échec du rendu React
             markerElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20" height="20" fill="${color}"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24V264c0 13.3-10.7 24-24 24s-24-10.7-24-24V152c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/></svg>`;
         }
 
@@ -889,12 +821,10 @@ const Map = ({ apiKey }: MapPageProps) => {
             .setLngLat(coordinates)
             .addTo(map);
 
-        // Déterminer si c'est un rapport utilisateur en vérifiant le type ou les propriétés reportedBy
         const isUserIncident = incident.type === 'user-report' ||
             (incident.properties && incident.properties.reportedBy) ||
             isUserReport;
 
-        // Créer le contenu du popup
         const popupContent = `
         <div style="max-width: 250px; color: black">
             <h3 style="font-weight: bold; margin-bottom: 8px;">${description}</h3>
@@ -911,11 +841,9 @@ const Map = ({ apiKey }: MapPageProps) => {
         </div>
     `;
 
-        // Créer et attacher le popup au marqueur
         const popup = new ttObject.Popup({ offset: 25 }).setHTML(popupContent);
         marker.setPopup(popup);
 
-        // Ajouter les gestionnaires d'événements pour les boutons (seulement pour les rapports utilisateur)
         if (isUserIncident && incidentId) {
             marker.getPopup().on('open', () => {
                 setTimeout(() => {
@@ -975,24 +903,16 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     }, [map]);
 
-    // Activer/désactiver le mode d'itinéraire
     const toggleRoutingMode = () => {
-        // Si on désactive le mode itinéraire
         if (isRoutingMode) {
-            // Nettoyer les marqueurs et l'itinéraire
             cleanupRouting();
         } else {
-            // Activer le mode itinéraire
             setRoutingStep('start');
         }
-
-        // Basculer le mode
         setIsRoutingMode(!isRoutingMode);
     };
 
-    // Fonction pour nettoyer les marqueurs et l'itinéraire
     const cleanupRouting = () => {
-        // Supprimer les marqueurs
         if (startMarker) {
             startMarker.remove();
             setStartMarker(null);
@@ -1008,12 +928,10 @@ const Map = ({ apiKey }: MapPageProps) => {
             }
         });
 
-        // Réinitialiser les emplacements
         setStartLocation(null);
         setEndLocation(null);
         setCurrentRoute(null);
 
-        // Supprimer l'itinéraire de la carte
         if (map) {
             if (map.getLayer('route')) {
                 map.removeLayer('route');
@@ -1023,11 +941,9 @@ const Map = ({ apiKey }: MapPageProps) => {
             }
         }
 
-        // Fermer le panneau d'itinéraire s'il est ouvert
         onRouteDrawerClose();
     };
 
-    // Signaler un incident
     const openIncidentReportModal = (location: [number, number]) => {
         setIncidentLocation(location);
         setIncidentType('accident');
@@ -1059,11 +975,10 @@ const Map = ({ apiKey }: MapPageProps) => {
                     isClosable: true,
                 });
 
-                // Fermer le modal et recharger les incidents
+
                 setIsIncidentModalOpen(false);
                 loadIncidents();
 
-                // Ajouter le nouvel incident à la liste des incidents de l'utilisateur
                 const newIncident = response.data.incident;
                 setUserIncidents(prev => [newIncident, ...prev]);
             }
@@ -1081,7 +996,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     };
 
-    // Sauvegarder l'itinéraire
     const saveRoute = async () => {
         if (!isAuthenticated || !currentRoute || !startLocation || !endLocation) return;
 
@@ -1119,7 +1033,6 @@ const Map = ({ apiKey }: MapPageProps) => {
         }
     };
 
-    // Texte d'aide selon l'étape
     const getRoutingHelperText = () => {
         if (!isRoutingMode) return "Rechercher un lieu...";
         if (routingStep === 'start') return "Point de départ";
@@ -1507,8 +1420,6 @@ const Map = ({ apiKey }: MapPageProps) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies pour vérifier l'authentification
-    // (optionnel car la carte peut être accessible sans authentification)
     const { req } = context;
     const token = req.cookies.token;
 

@@ -6,7 +6,6 @@ const { protect, restrictTo} = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Validation des champs d'inscription
 const registerValidation = [
     body('username')
         .trim()
@@ -26,7 +25,6 @@ const registerValidation = [
         .withMessage('Le mot de passe doit contenir au moins un chiffre')
 ];
 
-// Validation des champs de mise à jour du profil
 const updateProfileValidation = [
     body('username')
         .optional()
@@ -43,23 +41,19 @@ const updateProfileValidation = [
         .normalizeEmail()
 ];
 
-// Routes d'authentification standard
 router.post('/register', registerValidation, authController.register);
 router.post('/login', authController.login);
 router.post('/logout', authController.logout);
 
-// Routes nécessitant une authentification
 router.get('/me', protect, authController.getMe);
 router.patch('/me', protect, updateProfileValidation, authController.updateMe);
 router.patch('/password', protect, authController.updatePassword);
 
-// Routes d'administration protégées par role
 router.get('/users', protect, restrictTo(["admin"]), authController.getAllUsers);
 router.get('/users/:id', protect, restrictTo(["admin"]), authController.getUserById);
 router.patch('/users/:id', protect, restrictTo(["admin"]), authController.updateUser);
 router.delete('/users/:id', protect, restrictTo(["admin"]), authController.deleteUser);
 
-// Routes d'authentification OAuth Google
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get(
     '/google/callback',

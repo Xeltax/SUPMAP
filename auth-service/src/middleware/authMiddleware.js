@@ -14,7 +14,6 @@ const protect = passport.authenticate('jwt', { session: false });
  */
 const restrictTo = (...roles) => {
     return (req, res, next) => {
-        // req.user est défini par le middleware passport.authenticate
         if (!req.user) {
             return res.status(401).json({
                 status: 'error',
@@ -22,7 +21,6 @@ const restrictTo = (...roles) => {
             });
         }
 
-        // Vérifier si le rôle de l'utilisateur est dans la liste des rôles autorisés
         if (!roles[0].includes(req.user.role)) {
             return res.status(403).json({
                 status: 'error',
@@ -43,27 +41,25 @@ const optionalAuth = async (req, res, next) => {
         const token = extractTokenFromHeader(req);
 
         if (!token) {
-            return next(); // Pas de token, continuer sans authentification
+            return next();
         }
 
         const decoded = verifyToken(token);
 
         if (!decoded) {
-            return next(); // Token invalide, continuer sans authentification
+            return next();
         }
 
-        // Vérifier si l'utilisateur existe toujours
         const user = await User.findById(decoded.id);
 
         if (!user || !user.active) {
-            return next(); // Utilisateur non trouvé ou inactif
+            return next();
         }
 
-        // Ajouter l'utilisateur à la requête
         req.user = user;
         next();
     } catch (error) {
-        next(); // En cas d'erreur, continuer sans authentification
+        next();
     }
 };
 

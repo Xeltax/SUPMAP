@@ -7,9 +7,9 @@ class TomTomService {
     constructor() {
         this.apiKey = process.env.TOMTOM_API_KEY;
         this.baseUrl = 'https://api.tomtom.com';
-        this.routingVersion = '1'; // Version 1 pour l'API de routage
-        this.searchVersion = '2';  // Version 2 pour l'API de recherche
-        this.trafficVersion = '5'; // Version 2 pour l'API de trafic
+        this.routingVersion = '1';
+        this.searchVersion = '2';
+        this.trafficVersion = '5';
     }
 
     /**
@@ -59,17 +59,14 @@ class TomTomService {
 
             let locations = `${origin[1]},${origin[0]}`;
 
-            // Ajouter les points intermédiaires
             if (waypoints && waypoints.length > 0) {
                 waypoints.forEach(point => {
                     locations += `:${point[1]},${point[0]}`;
                 });
             }
 
-            // Ajouter la destination
             locations += `:${destination[1]},${destination[0]}`;
 
-            // Paramètres pour l'API de routage v1
             const params = {
                 avoid: avoidTolls ? 'tollRoads' : undefined,
                 routeType: routeType,
@@ -83,8 +80,6 @@ class TomTomService {
                 instructionRoadShieldReferences: instructionRoadShieldReferences
             };
 
-
-            // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
             const response = await client.get(
                 `/routing/${this.routingVersion}/calculateRoute/${locations}/json`,
@@ -125,13 +120,11 @@ class TomTomService {
                 throw new Error('La boîte englobante (bbox) doit contenir 4 valeurs [minLon, minLat, maxLon, maxLat]');
             }
 
-            // Vérifier que les valeurs du bbox sont valides
             const [minLon, minLat, maxLon, maxLat] = bbox;
             if (minLon > maxLon || minLat > maxLat) {
                 throw new Error('Valeurs de bbox invalides: minLon doit être <= maxLon et minLat doit être <= maxLat');
             }
 
-            // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
             const response = await client.get(`/traffic/services/${this.trafficVersion}/incidentDetails`, {
                 params: {
@@ -165,7 +158,6 @@ class TomTomService {
                 throw new Error('L\'identifiant de l\'incident est requis');
             }
 
-            // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
             const response = await client.get(`/traffic/services/${this.trafficVersion}/incidentDetails/${incidentId}`, {
                 params: {
@@ -198,7 +190,6 @@ class TomTomService {
                 throw new Error('La boîte englobante (bbox) doit contenir 4 valeurs [minLon, minLat, maxLon, maxLat]');
             }
 
-            // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
             const response = await client.get(`/traffic/services/${this.trafficVersion}/flowSegmentData/relative`, {
                 params: {
@@ -238,10 +229,8 @@ class TomTomService {
                 throw new Error('Au moins deux points sont requis pour définir un itinéraire');
             }
 
-            // Créer la chaîne de points pour l'API
             const pointsArray = points.map(point => `${point[1]},${point[0]}`);
 
-            // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
             const response = await client.get(`/traffic/services/${this.trafficVersion}/incidentDetails`, {
                 params: {
@@ -283,7 +272,6 @@ class TomTomService {
                 countrySet = 'FR'
             } = options;
 
-            // Effectuer la requête à l'API TomTom
             const client = this.createApiClient();
             const response = await client.get(`/search/${this.searchVersion}/search/${encodeURIComponent(query)}.json`, {
                 params: {

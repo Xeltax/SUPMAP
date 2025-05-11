@@ -32,7 +32,6 @@ const Register = () => {
     const router = useRouter();
     const toast = useToast();
 
-    // Rediriger vers le tableau de bord si l'utilisateur est déjà connecté
     useEffect(() => {
         if (isAuthenticated && !isLoading) {
             router.push('/dashboard');

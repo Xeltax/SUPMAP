@@ -5,7 +5,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-// Initialiser l'application Express
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -16,7 +15,6 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 
-// Middleware de vérification du token JWT
 const validateToken = require('./middleware/validateToken');
 
 console.log(process.env.AUTH_SERVICE_URL)
@@ -33,24 +31,8 @@ const serviceProxies = {
         pathRewrite: { '^/api/navigation': '/api' },
         changeOrigin: true
     },
-    incidents: {
-        target: process.env.INCIDENTS_SERVICE_URL || 'http://incidents-service:4002',
-        pathRewrite: { '^/api/incidents': '/api' },
-        changeOrigin: true
-    },
-    notifications: {
-        target: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:4003',
-        pathRewrite: { '^/api/notifications': '/api' },
-        changeOrigin: true
-    },
-    analytics: {
-        target: process.env.ANALYTICS_SERVICE_URL || 'http://analytics-service:4004',
-        pathRewrite: { '^/api/analytics': '/api' },
-        changeOrigin: true
-    }
 };
 
-// Définir les routes qui ne nécessitent pas d'authentification
 const publicRoutes = [
     '/api/auth/login',
     '/api/auth/register',
@@ -61,7 +43,6 @@ const publicRoutes = [
     '/health'
 ];
 
-// Middleware pour vérifier si une route est publique ou nécessite une authentification
 const authCheck = (req, res, next) => {
     if (publicRoutes.some(route => req.path.startsWith(route))) {
         return next();
@@ -69,7 +50,6 @@ const authCheck = (req, res, next) => {
     return validateToken(req, res, next);
 };
 
-// Route de santé pour vérifier si l'API Gateway fonctionne
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'success',
@@ -77,7 +57,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Configuration des proxies pour les services avec middleware d'authentification
 Object.entries(serviceProxies).forEach(([service, config]) => {
     const path = `/api/${service}`;
 
@@ -104,7 +83,6 @@ Object.entries(serviceProxies).forEach(([service, config]) => {
             }
         }));
     } else {
-        // Les autres services nécessitent une authentification
         app.use(path, authCheck, createProxyMiddleware({...config, onProxyReq: (proxyReq, req, res) => {
                 if (req.user && req.user.id) {
                     proxyReq.setHeader('X-User-ID', req.user.id);
@@ -128,7 +106,6 @@ Object.entries(serviceProxies).forEach(([service, config]) => {
     }
 });
 
-// Gérer les routes non trouvées
 app.use('*', (req, res) => {
     res.status(404).json({
         status: 'error',
@@ -136,7 +113,6 @@ app.use('*', (req, res) => {
     });
 });
 
-// Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
     console.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
 
@@ -146,12 +122,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Démarrer le serveur
 app.listen(PORT, () => {
     console.log(`API Gateway running on port ${PORT}`);
 });
 
-// Gestion de l'arrêt propre du serveur
 process.on('SIGINT', () => {
     console.log('API Gateway shutting down');
     process.exit(0);

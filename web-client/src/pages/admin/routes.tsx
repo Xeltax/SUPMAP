@@ -1,4 +1,3 @@
-// pages/admin/routes.tsx
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import {
@@ -61,7 +60,6 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import api from '@/services/api';
 
-// Types pour les itinéraires
 interface Route {
     id: string;
     name: string;
@@ -82,7 +80,6 @@ interface Route {
     avoidTolls: boolean;
 }
 
-// Composant principal
 const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
     const [routes, setRoutes] = useState<Route[]>(initialRoutes);
     const [filteredRoutes, setFilteredRoutes] = useState<Route[]>(initialRoutes);
@@ -102,11 +99,9 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
     const toast = useToast();
     const router = useRouter();
 
-    // Filtrer les itinéraires
     useEffect(() => {
         let result = routes.length > 0 ? [...routes] : [];
 
-        // Filtre de recherche
         if (searchTerm) {
             result = result.filter(route =>
                 route.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -116,12 +111,10 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
             );
         }
 
-        // Tri
         result.sort((a, b) => {
             let fieldA: any = a[sortField as keyof Route];
             let fieldB: any = b[sortField as keyof Route];
 
-            // Gestion des champs de type date
             if (typeof fieldA === 'string' && (sortField === 'createdAt' || sortField === 'lastUsed')) {
                 fieldA = new Date(fieldA).getTime();
                 fieldB = new Date(fieldB || '').getTime();
@@ -135,7 +128,6 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
         setFilteredRoutes(result);
     }, [searchTerm, sortField, sortOrder, routes]);
 
-    // Formatage de la date
     const formatDate = (dateString?: string) => {
         if (!dateString) return 'N/A';
 
@@ -149,7 +141,6 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
         }).format(date);
     };
 
-    // Formatage de la distance
     const formatDistance = (meters: number) => {
         if (meters < 1000) {
             return `${meters} m`;
@@ -157,7 +148,6 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
         return `${(meters / 1000).toFixed(1)} km`;
     };
 
-    // Formatage de la durée
     const formatDuration = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
@@ -168,7 +158,6 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
         return `${minutes} min`;
     };
 
-    // Changer l'ordre de tri
     const toggleSortOrder = (field: string) => {
         if (sortField === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -178,21 +167,17 @@ const RoutesPage = ({ initialRoutes }: { initialRoutes: Route[] }) => {
         }
     };
 
-    // Ouvrir le modal de détails
     const handleViewDetails = (route: Route) => {
         setSelectedRoute(route);
         onDetailOpen();
     };
 
-    // Ouvrir le modal de suppression
     const handleDeleteRoute = (route: Route) => {
         setSelectedRoute(route);
         onDeleteOpen();
     };
 
-    // Voir sur la carte
     const handleViewOnMap = (route: Route) => {
-        // Rediriger vers la page de carte avec l'itinéraire sélectionné
         router.push(`/map?route=${route.id}`);
     };
 
@@ -610,11 +595,9 @@ const RouteDetailItem = ({ icon, label, value, color }: RouteDetailItemProps) =>
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -625,7 +608,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
@@ -635,7 +617,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             config
         );
 
-        // Créer un tableau de promesses pour récupérer les noms d'utilisateurs
         const routePromises = routesResponse.data.data.routes.map(async (route : Route) => {
             try {
                 const userResponse = await axios.get(
@@ -656,7 +637,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 }
             } catch (error) {
                 console.error(`Erreur lors de la récupération de l'utilisateur pour l'itinéraire ${route.id}:`, error);
-                // En cas d'erreur, on retourne l'itinéraire sans nom d'utilisateur
                 return {
                     ...route,
                     username: "Utilisateur inconnu",
@@ -664,10 +644,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             }
         });
 
-        // Attendre que toutes les promesses soient résolues
         const routesWithUsernames = await Promise.all(routePromises);
-
-        console.log(routesWithUsernames)
 
         return {
             props: {
@@ -677,7 +654,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des itinéraires:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -687,7 +663,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher une page avec une liste vide
         return {
             props: {
                 initialRoutes: []

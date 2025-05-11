@@ -123,11 +123,9 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
     const toast = useToast();
     const router = useRouter();
 
-    // Filtrer les incidents
     useEffect(() => {
         let result = [...incidents];
 
-        // Filtre de recherche
         if (searchTerm) {
             result = result.filter(incident =>
                 incident.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,22 +134,18 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
             );
         }
 
-        // Filtre par statut
         if (statusFilter !== 'all') {
             result = result.filter(incident => incident.active === (statusFilter === 'active'));
         }
 
-        // Filtre par type d'incident
         if (typeFilter !== 'all') {
             result = result.filter(incident => incident.incidentType === typeFilter);
         }
 
-        // Filtre par sévérité
         if (severityFilter !== 'all') {
             result = result.filter(incident => incident.severity === severityFilter);
         }
 
-        // Filtre pour les incidents expirés
         if (!showExpiredIncidents && result.some(incident => incident.expiresAt)) {
             const now = new Date().getTime();
             result = result.filter(incident => {
@@ -164,7 +158,6 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
         setFilteredIncidents(result);
     }, [searchTerm, statusFilter, typeFilter, severityFilter, showExpiredIncidents, incidents]);
 
-    // Mettre à jour les incidents affichés lorsque les incidents filtrés changent
     useEffect(() => {
         setDisplayedIncidents(filteredIncidents.slice(0, displayCount));
     }, [filteredIncidents, displayCount]);
@@ -392,7 +385,6 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
                             variant="outline"
                             onClick={() => {
                                 setLoading(true);
-                                // Simuler une actualisation des données
                                 setTimeout(() => {
                                     setLoading(false);
                                     toast({
@@ -847,11 +839,9 @@ const IncidentsPage = ({ initialIncidents }: { initialIncidents: Incident[] }) =
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -862,12 +852,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Fetch incidents and users
         const [incidentsResponse, usersResponse] = await Promise.all([
             axios.get(`${process.env.API_URL}/api/navigation/traffic/reports`, config),
             axios.get(`${process.env.API_URL}/api/auth/users`, config)
@@ -876,7 +864,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const incidents = incidentsResponse.data.data.incidents;
         const users = usersResponse.data.data.users;
 
-        // Ajouter le nom d'utilisateur à chaque incident
         const incidentsWithUsers = incidents.map((incident: any) => {
             const user = users.find((u: any) => u.id === incident.userId);
             return {
@@ -893,7 +880,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des incidents:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -903,7 +889,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher une page avec une liste vide
         return {
             props: {
                 initialIncidents: []

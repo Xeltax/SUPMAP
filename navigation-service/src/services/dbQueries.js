@@ -3,7 +3,6 @@ const { DataTypes } = require('sequelize');
 const { Op } = require('sequelize');
 const { Sequelize } = require('sequelize');
 
-// Définition du modèle Incident
 const Incident = sequelize.define('Incident', {
     id: {
         type: DataTypes.STRING,
@@ -22,7 +21,7 @@ const Incident = sequelize.define('Incident', {
     location: {
         type: DataTypes.GEOMETRY('POINT', 4326),
         allowNull: false,
-        unique: true // Ajout d'une contrainte d'unicité sur la localisation
+        unique: true
     },
     description: {
         type: DataTypes.TEXT,
@@ -50,10 +49,10 @@ const Incident = sequelize.define('Incident', {
         allowNull: false
     }
 }, {
-    tableName: 'incidents',  // Définition explicite du nom de la table en minuscules
-    schema: 'public',        // Définition explicite du schéma
+    tableName: 'incidents',
+    schema: 'public',
     timestamps: true,
-    freezeTableName: true    // Empêche Sequelize de pluraliser le nom de la table
+    freezeTableName: true
 });
 
 /**
@@ -100,7 +99,6 @@ async function insertTrafficIncidents(incidents) {
             const tomtomSeverity = incident.properties.magnitudeOfDelay;
             const mappedSeverity = TOMTOM_TO_SEVERITY[tomtomSeverity] || 'moderate';
 
-            // Gestion des géométries de type Point et LineString
             let coordinates;
             if (incident.geometry.type === 'Point') {
                 coordinates = incident.geometry.coordinates;
@@ -111,7 +109,6 @@ async function insertTrafficIncidents(incidents) {
                 continue;
             }
 
-            // Recherche d'un incident existant avec la même localisation et le même type
             const existingIncident = await Incident.findOne({
                 where: {
                     [Op.and]: [
@@ -130,18 +127,15 @@ async function insertTrafficIncidents(incidents) {
             });
 
             if (existingIncident) {
-                // Vérifier si l'incident a expiré
                 const now = new Date();
                 const isExpired = existingIncident.expiresAt < now;
 
-                // Mise à jour du statut actif et des validations/invalidations
                 await existingIncident.update({
                     active: !isExpired && incident.properties.active,
                     validations: existingIncident.validations,
                     invalidations: existingIncident.invalidations
                 });
             } else {
-                // Création d'un nouvel incident si aucun n'existe à cet emplacement avec ce type
                 await Incident.create({
                     incidentType: mappedType,
                     location: Sequelize.fn('ST_SetSRID', 

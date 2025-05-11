@@ -6,12 +6,10 @@ const sequelize = require('./config/database');
 const cron = require('node-cron');
 const { fetchAndStoreIncidents } = require('./cron/trafficIncidentsCron');
 
-// Routes
 const routesRoutes = require('./routes/routesRoutes');
 const trafficRoutes = require('./routes/trafficRoutes');
 const { seedDatabase } = require('./utils/seedData');
 
-// Tester la connexion à la base de données
 sequelize
     .authenticate()
     .then(() => {
@@ -21,17 +19,14 @@ sequelize
         console.error('Impossible de se connecter à PostgreSQL:', err);
     });
 
-// Initialiser l'application Express
 const app = express();
 const PORT = process.env.PORT || 4001;
 
-// Middlewares de base
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
 
-// Route de santé
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'success',
@@ -39,11 +34,9 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Routes API
 app.use('/api/routes', routesRoutes);
 app.use('/api/traffic', trafficRoutes);
 
-// Gérer les routes non trouvées
 app.use('*', (req, res) => {
     res.status(404).json({
         status: 'error',
@@ -51,7 +44,6 @@ app.use('*', (req, res) => {
     });
 });
 
-// Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
     console.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
 
@@ -61,7 +53,6 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Synchroniser les modèles avec la base de données et démarrer le serveur
 sequelize.sync({ alter: process.env.NODE_ENV === 'development', force : true })
     .then(() => {
         console.log(`BDD synchronisée avec succès`);
@@ -76,15 +67,13 @@ sequelize.sync({ alter: process.env.NODE_ENV === 'development', force : true })
         console.error('Erreur lors de la synchronisation des modèles:', err);
     });
 
-// Démarrer le cron job pour les incidents de trafic
 console.log('Starting traffic incidents cron job...');
-// Exécuter toutes les 5 minutes
+
 cron.schedule('*/5 * * * *', () => {
     console.log('Running traffic incidents cron job...');
     fetchAndStoreIncidents();
 });
 
-// Gestion de l'arrêt propre du serveur
 process.on('SIGINT', async () => {
     console.log('Navigation services shutting down');
     await sequelize.close();

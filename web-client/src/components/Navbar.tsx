@@ -50,8 +50,6 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
         router.push('/');
     };
 
-    console.log('user', user);
-
     return (
         <Box>
             <Flex
@@ -192,7 +190,6 @@ const DesktopNav = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
     const linkHoverColor = useColorModeValue('blue.600', 'blue.300');
     const popoverContentBgColor = useColorModeValue('white', 'gray.800');
 
-    // Différentes options de navigation selon que l'utilisateur est connecté ou non
     const NAV_ITEMS = isAuthenticated
         ? [
             {

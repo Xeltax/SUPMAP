@@ -11,8 +11,7 @@ const NORMANDY_BBOX = [-1.5373653562812137, 48.90257667883992, 0.788074177850461
 async function fetchAndStoreIncidents() {
     try {
         console.log('Fetching traffic incidents...');
-        
-        // Récupérer les incidents depuis l'API TomTom
+
         const response = await tomtomService.getTrafficIncidents({
             bbox: NORMANDY_BBOX,
             incidentType: 'all',
@@ -22,8 +21,7 @@ async function fetchAndStoreIncidents() {
 
         if (response.incidents && response.incidents.length > 0) {
             console.log(`Found ${response.incidents.length} incidents`);
-            
-            // Insérer les incidents dans la base de données
+
             await insertTrafficIncidents(response.incidents);
             console.log('Successfully stored incidents in database');
         } else {

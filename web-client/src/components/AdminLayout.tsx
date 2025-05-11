@@ -29,7 +29,8 @@ import {
     FiSettings,
     FiLogOut,
     FiSun,
-    FiMoon
+    FiMoon,
+    FiTrendingUp
 } from 'react-icons/fi';
 import { FaRoute } from 'react-icons/fa';
 import NextLink from 'next/link';
@@ -47,6 +48,7 @@ const LinkItems: Array<LinkItemProps> = [
     { name: 'Utilisateurs', icon: FiUsers, path: '/admin/users' },
     { name: 'Itinéraires', icon: FaRoute, path: '/admin/routes' },
     { name: 'Incidents', icon: FiAlertTriangle, path: '/admin/incidents' },
+    { name: 'Prédictions', icon: FiTrendingUp, path: '/admin/predictions' },
     { name: 'Statistiques', icon: FiBarChart2, path: '/admin/stat' },
 ];
 

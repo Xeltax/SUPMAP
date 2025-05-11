@@ -58,7 +58,6 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import {FaRoadBarrier} from "react-icons/fa6";
 
-// Types adaptés à votre API
 interface Incident {
     id: string;
     userId: string;
@@ -86,7 +85,6 @@ interface IncidentsPageProps {
     };
 }
 
-// Fonction utilitaire pour obtenir l'icône appropriée selon le type d'incident
 const getIncidentIcon = (type: string) => {
     switch (type) {
         case 'accident':
@@ -106,7 +104,6 @@ const getIncidentIcon = (type: string) => {
     }
 };
 
-// Fonction utilitaire pour obtenir le libellé en français du type d'incident
 const getIncidentTypeLabel = (type: string) => {
     switch (type) {
         case 'accident':
@@ -128,7 +125,6 @@ const getIncidentTypeLabel = (type: string) => {
     }
 };
 
-// Fonction utilitaire pour obtenir la couleur appropriée selon la sévérité
 const getSeverityColor = (severity: string) => {
     switch (severity) {
         case 'low':
@@ -144,7 +140,6 @@ const getSeverityColor = (severity: string) => {
     }
 };
 
-// Fonction utilitaire pour obtenir le libellé en français de la sévérité
 const getSeverityLabel = (severity: string) => {
     switch (severity) {
         case 'low':
@@ -160,7 +155,6 @@ const getSeverityLabel = (severity: string) => {
     }
 };
 
-// Fonction pour formater la date
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('fr-FR', {
@@ -172,7 +166,6 @@ const formatDate = (dateString: string) => {
     }).format(date);
 };
 
-// Fonction pour calculer le temps restant avant expiration
 const getTimeRemaining = (expiresAt: string) => {
     const now = new Date();
     const expiration = new Date(expiresAt);
@@ -190,10 +183,7 @@ const getTimeRemaining = (expiresAt: string) => {
     return `${diffDays}j ${diffHours % 24}h`;
 };
 
-// Fonction pour convertir les coordonnées en adresse (simulée)
 const getAddressFromCoordinates = (coordinates: number[]) => {
-    // Ici vous utiliseriez normalement un service de géocodage inverse
-    // Pour l'exemple, on retourne une adresse générique
     return `Lat: ${coordinates[1].toFixed(5)}, Long: ${coordinates[0].toFixed(5)}`;
 };
 
@@ -212,16 +202,13 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
     const cancelRef = React.useRef<HTMLButtonElement>(null);
     const [incidentToDelete, setIncidentToDelete] = useState<string | null>(null);
 
-    // Filtrage des incidents
     const filteredIncidents = incidents.filter(incident => {
-        // Filtre par type
+
         if (filterType !== 'all' && incident.incidentType !== filterType) return false;
 
-        // Filtre par statut actif/inactif
         if (filterActive === 'active' && !incident.active) return false;
         if (filterActive === 'expired' && incident.active) return false;
 
-        // Filtre par recherche (description ou coordonnées)
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             const addressString = getAddressFromCoordinates(incident.location.coordinates).toLowerCase();
@@ -235,7 +222,6 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
         return true;
     });
 
-    // Tri des incidents
     const sortedIncidents = [...filteredIncidents].sort((a, b) => {
         if (sortBy === 'date') {
             const dateA = new Date(a.createdAt).getTime();
@@ -254,7 +240,6 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
         return 0;
     });
 
-    // Gestion de la suppression d'incident
     const handleDeleteClick = (id: string) => {
         setIncidentToDelete(id);
         onOpen();
@@ -264,12 +249,10 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
         if (!incidentToDelete) return;
 
         try {
-            // Appel API pour supprimer l'incident
             await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/navigation/traffic/reports/${incidentToDelete}`, {
                 withCredentials: true
             });
 
-            // Mise à jour de l'état
             setIncidents(incidents.filter(inc => inc.id !== incidentToDelete));
 
             toast({
@@ -292,12 +275,10 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
         }
     };
 
-    // Fonction pour naviguer vers la carte avec l'incident sélectionné
     const viewOnMap = (incident: Incident) => {
         router.push(`/map?lat=${incident.location.coordinates[1]}&lng=${incident.location.coordinates[0]}&incident=${incident.id}`);
     };
 
-    // Vérifie si un incident est expiré
     const isExpired = (expiresAt: string) => {
         return new Date(expiresAt) <= new Date();
     };
@@ -550,11 +531,9 @@ const IncidentsPage = ({ incidents: initialIncidents, userData }: IncidentsPageP
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -565,16 +544,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Récupération des données utilisateur
         const userResponse = await axios.get(`${process.env.API_URL}/api/auth/me`, config);
         const userId = userResponse.data.data.user.id;
 
-        // Récupération des incidents de l'utilisateur
         const incidentsResponse = await axios.get(
             `${process.env.API_URL}/api/navigation/traffic/reports`,
             {
@@ -582,8 +558,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 params: { userId }
             }
         );
-
-        console.log('incidentsResponse', incidentsResponse.data.data.incidents);
 
         return {
             props: {
@@ -594,7 +568,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -604,7 +577,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher la page avec des données vides
         return {
             props: {
                 incidents: [],

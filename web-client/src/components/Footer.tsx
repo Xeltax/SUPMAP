@@ -2,15 +2,9 @@ import {
     Box,
     Container,
     Stack,
-    SimpleGrid,
     Text,
-    Link,
     useColorModeValue,
-    Flex,
-    IconButton,
 } from '@chakra-ui/react';
-import { FaTwitter, FaYoutube, FaInstagram, FaGithub, FaEnvelope } from 'react-icons/fa';
-import NextLink from 'next/link';
 
 const Footer = () => {
     return (

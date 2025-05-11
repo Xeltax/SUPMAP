@@ -25,11 +25,10 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             required: [function() {
-                // Le mot de passe est requis sauf si le compte utilise OAuth
                 return !this.oauthProvider;
             }, 'Le mot de passe est requis'],
             minlength: 8,
-            select: false // Ne pas inclure par défaut dans les requêtes
+            select: false
         },
         oauthProvider: {
             type: String,
@@ -38,7 +37,7 @@ const userSchema = new mongoose.Schema(
         },
         oauthId: {
             type: String,
-            sparse: true // Permet null mais unique si présent
+            sparse: true
         },
         role: {
             type: String,
@@ -70,11 +69,9 @@ const userSchema = new mongoose.Schema(
 
 // Middleware de chiffrement du mot de passe avant la sauvegarde
 userSchema.pre('save', async function(next) {
-    // Ne pas hacher à nouveau le mot de passe s'il n'a pas été modifié
     if (!this.isModified('password')) return next();
 
     try {
-        // Générer un salt avec un facteur de coût de 12
         const salt = await bcrypt.genSalt(12);
         // Hacher le mot de passe avec le salt
         this.password = await bcrypt.hash(this.password, salt);
@@ -84,12 +81,10 @@ userSchema.pre('save', async function(next) {
     }
 });
 
-// Méthode pour comparer les mots de passe
 userSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Méthode pour ne pas renvoyer les informations sensibles
 userSchema.methods.toPublicJSON = function() {
     const userObject = this.toObject();
     delete userObject.password;

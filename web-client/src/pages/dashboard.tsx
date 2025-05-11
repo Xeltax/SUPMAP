@@ -25,7 +25,6 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import api from "@/services/api";
 
-// Types
 interface DashboardProps {
     userData: {
         username: string;
@@ -223,11 +222,9 @@ const Dashboard = ({ userData, stats, recentRoutes }: DashboardProps) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -238,15 +235,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Récupération des données utilisateur
         const userResponse = await axios.get(`${process.env.API_URL}/api/auth/me`, config);
 
-        // Récupération des itinéraires récents
         const routesResponse = await axios.get(
             `${process.env.API_URL}/api/navigation/routes/user?limit=3&sort=lastUsed`,
             config
@@ -256,16 +250,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             `${process.env.API_URL}/api/navigation/traffic/reports`,
             {...config, params : { userId : userResponse.data.data.user.id }}
         );
-        // Récupération des statistiques (incidents signalés, etc.)
-        // Note: Cette partie nécessiterait les endpoints correspondants
-        // Pour l'exemple, nous utilisons des données fictives
 
         return {
             props: {
                 userData: userResponse.data.data.user,
                 stats: {
                     savedRoutes: routesResponse.data.data.routes.length,
-                    reportedIncidents: incidentsResponse.data.data.incidents.length,  // Données fictives
+                    reportedIncidents: incidentsResponse.data.data.incidents.length,
                 },
                 recentRoutes: routesResponse.data.data.routes || [],
             },
@@ -273,7 +264,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -283,7 +273,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher le dashboard avec des données vides
         return {
             props: {
                 userData: { username: "Utilisateur" },

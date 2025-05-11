@@ -72,7 +72,6 @@ import {FaRoadSpikes} from "react-icons/fa6";
 import api from "@/services/api";
 import {FiDownload} from "react-icons/fi";
 
-// Types
 interface RouteCoordinates {
     type: string;
     coordinates: number[];
@@ -108,7 +107,6 @@ interface RoutesPageProps {
     };
 }
 
-// Fonction pour formatter la durée (en secondes) en format lisible
 const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -120,7 +118,6 @@ const formatDuration = (seconds: number) => {
     }
 };
 
-// Fonction pour formatter la distance (en mètres) en format lisible
 const formatDistance = (meters: number) => {
     if (meters < 1000) {
         return `${meters}m`;
@@ -129,7 +126,6 @@ const formatDistance = (meters: number) => {
     }
 };
 
-// Fonction pour formater la date
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('fr-FR', {
@@ -141,7 +137,6 @@ const formatDate = (dateString: string) => {
     }).format(date);
 };
 
-// Fonction pour obtenir une icône selon le type d'itinéraire
 const getRouteTypeIcon = (routeType: string) => {
     switch (routeType) {
         case 'fastest':
@@ -155,7 +150,6 @@ const getRouteTypeIcon = (routeType: string) => {
     }
 };
 
-// Fonction pour obtenir le libellé du type d'itinéraire
 const getRouteTypeLabel = (routeType: string) => {
     switch (routeType) {
         case 'fastest':
@@ -187,15 +181,11 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
     const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
     const { isOpen: isQRCodeOpen, onOpen: onQRCodeOpen, onClose: onQRCodeClose } = useDisclosure();
 
-    // Filtrage des itinéraires
     const filteredRoutes = routes.filter(route => {
-        // Filtre par favoris
         if (filterFavorite && !route.isFavorite) return false;
 
-        // Filtre par type d'itinéraire
         if (filterRouteType !== 'all' && route.routeType !== filterRouteType) return false;
 
-        // Filtre par recherche (nom, origine, destination)
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             return (
@@ -208,7 +198,6 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
         return true;
     });
 
-    // Tri des itinéraires
     const sortedRoutes = [...filteredRoutes].sort((a, b) => {
         if (sortBy === 'lastUsed') {
             const dateA = new Date(a.lastUsed).getTime();
@@ -230,7 +219,6 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
         return 0;
     });
 
-    // Gestion de la suppression d'itinéraire
     const handleDeleteClick = (id: string) => {
         setRouteToDelete(id);
         onOpen();
@@ -242,7 +230,6 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
         try {
             await api.routes.deleteRoute(routeToDelete);
 
-            // Mise à jour de l'état
             setRoutes(routes.filter(route => route.id !== routeToDelete));
 
             toast({
@@ -323,16 +310,12 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
         });
     };
 
-
-    // Fonction pour mettre à jour le statut favori d'un itinéraire
     const toggleFavorite = async (route: Route) => {
         try {
             const updatedIsFavorite = !route.isFavorite;
 
-            // Appel API pour mettre à jour le statut favori
             await api.routes.updateRoute(route.id, { isFavorite: updatedIsFavorite });
 
-            // Mise à jour de l'état local
             setRoutes(routes.map(r =>
                 r.id === route.id ? { ...r, isFavorite: updatedIsFavorite } : r
             ));
@@ -354,7 +337,6 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
         }
     };
 
-    // Fonction pour naviguer vers la carte avec l'itinéraire sélectionné
     const viewOnMap = (route: Route) => {
         router.push(`/map?route=${route.id}`);
     };
@@ -697,11 +679,9 @@ const RoutesPage = ({ routes: initialRoutes, userData }: RoutesPageProps) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -712,16 +692,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Récupération des données utilisateur
         const userResponse = await axios.get(`${process.env.API_URL}/api/auth/me`, config);
         const userId = userResponse.data.data.user.id;
 
-        // Récupération des itinéraires de l'utilisateur
         const routesResponse = await axios.get(
             `${process.env.API_URL}/api/navigation/routes/user`,
             {
@@ -739,7 +716,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -749,7 +725,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, afficher la page avec des données vides
         return {
             props: {
                 routes: [],

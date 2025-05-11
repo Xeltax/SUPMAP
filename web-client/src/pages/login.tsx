@@ -29,7 +29,6 @@ const Login = () => {
     const router = useRouter();
     const toast = useToast();
 
-    // Rediriger vers le tableau de bord si l'utilisateur est déjà connecté
     useEffect(() => {
         if (isAuthenticated && !isLoading) {
             router.push('/dashboard');
@@ -111,9 +110,6 @@ const Login = () => {
                             </Stack>
                             <HStack justify="space-between">
                                 <Checkbox defaultChecked>Se souvenir de moi</Checkbox>
-                                {/*<Link as={NextLink} href="/forgot-password" color={useColorModeValue('blue.500', 'blue.300')} fontSize="sm">*/}
-                                {/*    Mot de passe oublié?*/}
-                                {/*</Link>*/}
                             </HStack>
                             <Stack spacing="4">
                                 <Button

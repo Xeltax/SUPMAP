@@ -20,7 +20,6 @@ exports.register = async (req, res, next) => {
 
         const { username, email, password } = req.body;
 
-        // Vérifier si l'utilisateur existe déjà
         const existingUser = await User.findOne({
             $or: [{ email }, { username }]
         });
@@ -32,7 +31,6 @@ exports.register = async (req, res, next) => {
             });
         }
 
-        // Créer un nouveau utilisateur
         const user = await User.create({
             username,
             email,
@@ -40,10 +38,8 @@ exports.register = async (req, res, next) => {
             emailVerificationToken: crypto.randomBytes(32).toString('hex')
         });
 
-        // Générer un token JWT
         const token = generateToken(user);
 
-        // Répondre avec les données utilisateur (sans informations sensibles) et le token
         res.status(201).json({
             status: 'success',
             data: {
@@ -64,7 +60,6 @@ exports.login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        // Vérifier si l'email et le mot de passe sont fournis
         if (!email || !password) {
             return res.status(400).json({
                 status: 'error',
@@ -72,10 +67,8 @@ exports.login = async (req, res, next) => {
             });
         }
 
-        // Rechercher l'utilisateur et inclure explicitement le mot de passe pour la comparaison
         const user = await User.findOne({ email }).select('+password');
 
-        // Vérifier si l'utilisateur existe et si le mot de passe est correct
         if (!user || !(await user.comparePassword(password))) {
             return res.status(401).json({
                 status: 'error',
@@ -83,7 +76,6 @@ exports.login = async (req, res, next) => {
             });
         }
 
-        // Vérifier si l'utilisateur est actif
         if (!user.active) {
             return res.status(401).json({
                 status: 'error',
@@ -91,10 +83,8 @@ exports.login = async (req, res, next) => {
             });
         }
 
-        // Générer un token JWT
         const token = generateToken(user);
 
-        // Répondre avec les données utilisateur et le token
         res.status(200).json({
             status: 'success',
             data: {
@@ -113,7 +103,6 @@ exports.login = async (req, res, next) => {
  */
 exports.getMe = async (req, res, next) => {
     try {
-        // req.user est défini par le middleware protect
         res.status(200).json({
             status: 'success',
             data: {
@@ -133,7 +122,6 @@ exports.updateMe = async (req, res, next) => {
     try {
         const { username, email } = req.body;
 
-        // Vérifier les erreurs de validation
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({
@@ -142,7 +130,6 @@ exports.updateMe = async (req, res, next) => {
             });
         }
 
-        // Vérifier si le nom d'utilisateur ou l'email est déjà utilisé
         if (username || email) {
             const existingUser = await User.findOne({
                 $or: [
@@ -159,13 +146,11 @@ exports.updateMe = async (req, res, next) => {
             }
         }
 
-        // Mettre à jour l'utilisateur
         const updatedUser = await User.findByIdAndUpdate(
             req.user._id,
             {
                 username: username || req.user.username,
                 email: email || req.user.email,
-                // Ajouter d'autres champs si nécessaire (sauf le mot de passe)
             },
             { new: true, runValidators: true }
         );
@@ -189,7 +174,6 @@ exports.updatePassword = async (req, res, next) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
-        // Vérifier si les mots de passe sont fournis
         if (!currentPassword || !newPassword) {
             return res.status(400).json({
                 status: 'error',
@@ -197,7 +181,6 @@ exports.updatePassword = async (req, res, next) => {
             });
         }
 
-        // Vérifier que le nouveau mot de passe est assez long
         if (newPassword.length < 8) {
             return res.status(400).json({
                 status: 'error',
@@ -205,10 +188,8 @@ exports.updatePassword = async (req, res, next) => {
             });
         }
 
-        // Récupérer l'utilisateur avec le mot de passe
         const user = await User.findById(req.user._id).select('+password');
 
-        // Vérifier si le mot de passe actuel est correct
         if (!(await user.comparePassword(currentPassword))) {
             return res.status(401).json({
                 status: 'error',
@@ -216,11 +197,9 @@ exports.updatePassword = async (req, res, next) => {
             });
         }
 
-        // Mettre à jour le mot de passe
         user.password = newPassword;
         await user.save();
 
-        // Générer un nouveau token JWT
         const token = generateToken(user);
 
         res.status(200).json({
@@ -307,7 +286,6 @@ exports.updateUser = async (req, res, next) => {
         const { id } = req.params;
         const { username, email, role, active } = req.body;
 
-        // Vérifier les erreurs de validation
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({
@@ -316,7 +294,6 @@ exports.updateUser = async (req, res, next) => {
             });
         }
 
-        // Vérifier si l'utilisateur existe
         const user = await User.findById(id);
 
         if (!user) {
@@ -326,7 +303,6 @@ exports.updateUser = async (req, res, next) => {
             });
         }
 
-        // Mettre à jour l'utilisateur
         user.username = username || user.username;
         user.email = email || user.email;
         user.role = role || user.role;
@@ -356,7 +332,6 @@ exports.deleteUser = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        // Vérifier si l'utilisateur existe
         const user = await User.findById(id);
 
         if (!user) {
@@ -366,7 +341,6 @@ exports.deleteUser = async (req, res, next) => {
             });
         }
 
-        // Supprimer l'utilisateur
         await user.deleteOne();
 
         res.status(204).json({

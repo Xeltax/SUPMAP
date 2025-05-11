@@ -27,7 +27,6 @@ exports.getTrafficInfo = async (req, res, next) => {
             });
         }
 
-        // Obtenir les informations de trafic depuis l'API TomTom
         const trafficInfo = await tomtomService.getTrafficInfo({
             bbox: bboxArray,
             zoom: zoom ? parseInt(zoom) : 10
@@ -60,7 +59,6 @@ exports.getTrafficIncidents = async (req, res, next) => {
             });
         }
 
-        // Convertir la chaîne bbox en tableau de nombres
         const bboxArray = bbox.split(',').map(Number);
 
         if (bboxArray.length !== 4) {
@@ -70,15 +68,11 @@ exports.getTrafficIncidents = async (req, res, next) => {
             });
         }
 
-        console.log("pass here amigo")
-
-        // Obtenir les incidents de trafic depuis l'API TomTom
         const tomtomIncidents = await tomtomService.getTrafficIncidents({
             bbox: bboxArray,
             incidentType: incidentType || 'all'
         });
 
-        // Récupérer également les incidents signalés par les utilisateurs
         const userIncidents = await Incident.findAll({
             where: {
                 location: {
@@ -100,7 +94,6 @@ exports.getTrafficIncidents = async (req, res, next) => {
             }
         });
 
-        // Transformer les incidents utilisateur pour les adapter au format TomTom
         const formattedUserIncidents = userIncidents.map(incident => ({
             id: incident.id,
             type: 'user-report',
@@ -129,7 +122,6 @@ exports.getTrafficIncidents = async (req, res, next) => {
             }
         }));
 
-        // Combiner les incidents TomTom et les incidents utilisateur
         const incidents = {
             ...tomtomIncidents,
             incidents: [
@@ -171,7 +163,6 @@ exports.reportTrafficIncident = async (req, res, next) => {
             });
         }
 
-        // Vérifier que le type d'incident est valide
         const validTypes = ['accident', 'congestion', 'roadClosed', 'roadworks', 'hazard', 'police'];
         if (!validTypes.includes(incidentType)) {
             return res.status(400).json({
@@ -180,20 +171,16 @@ exports.reportTrafficIncident = async (req, res, next) => {
             });
         }
 
-        // Créer un point PostgreSQL pour la localisation
         const pgPoint = {
             type: 'Point',
             coordinates: coordinates
         };
 
-        // Calculer la date d'expiration en fonction de la durée fournie
         const expiresAt = new Date();
         expiresAt.setMinutes(expiresAt.getMinutes() + (durationMinutes || 60));
 
-        // Extraire l'ID de l'utilisateur depuis le token JWT
         const userId = req.headers['x-user-id'];
 
-        // Créer l'incident
         const incident = await Incident.create({
             userId,
             incidentType,
@@ -256,25 +243,20 @@ exports.getUserReports = async (req, res, next) => {
     try {
         const { bbox, userId, active, incidentType } = req.query;
 
-        // Construire les conditions de recherche
         const where = {};
 
-        // Filtrer par utilisateur si demandé
         if (userId) {
             where.userId = userId;
         }
 
-        // Filtrer par statut actif si demandé
         if (active !== undefined) {
             where.active = active === 'true';
         }
 
-        // Filtrer par type d'incident si demandé
         if (incidentType) {
             where.incidentType = incidentType;
         }
 
-        // Filtrer par zone géographique si bbox fourni
         if (bbox) {
             const bboxArray = bbox.split(',').map(Number);
 
@@ -294,7 +276,6 @@ exports.getUserReports = async (req, res, next) => {
             }
         }
 
-        // Récupérer les incidents
         const incidents = await Incident.findAll({
             where,
             order: [['createdAt', 'DESC']]
@@ -320,7 +301,6 @@ exports.validateIncidentReport = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        // Récupérer l'incident
         const incident = await Incident.findByPk(id);
 
         if (!incident) {
@@ -330,7 +310,6 @@ exports.validateIncidentReport = async (req, res, next) => {
             });
         }
 
-        // Mettre à jour le nombre de validations
         incident.validations += 1;
         await incident.save();
 
@@ -353,7 +332,6 @@ exports.invalidateIncidentReport = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        // Récupérer l'incident
         const incident = await Incident.findByPk(id);
 
         if (!incident) {
@@ -363,10 +341,8 @@ exports.invalidateIncidentReport = async (req, res, next) => {
             });
         }
 
-        // Mettre à jour le nombre d'invalidations
         incident.invalidations += 1;
 
-        // Si le nombre d'invalidations dépasse un certain seuil, désactiver l'incident
         if (incident.invalidations >= 3) {
             incident.active = false;
         }

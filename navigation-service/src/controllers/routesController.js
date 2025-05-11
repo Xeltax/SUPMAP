@@ -34,7 +34,6 @@ exports.calculateRoute = async (req, res, next) => {
         let originCoords = Array.isArray(origin) ? origin : await tomtomService.geocode(origin);
         let destinationCoords = Array.isArray(destination) ? destination : await tomtomService.geocode(destination);
 
-        // Traiter les waypoints si fournis
         let waypointCoords = [];
         if (waypoints && waypoints.length > 0) {
             waypointCoords = await Promise.all(
@@ -44,7 +43,6 @@ exports.calculateRoute = async (req, res, next) => {
             );
         }
 
-        // Calculer l'itinéraire
         const routeData = await tomtomService.calculateRoute({
             origin: originCoords,
             destination: destinationCoords,
@@ -54,10 +52,7 @@ exports.calculateRoute = async (req, res, next) => {
             traffic: traffic !== undefined ? traffic : true
         });
 
-        // Adapter la structure de la réponse pour l'API v1
-        // Note: La structure diffère entre v1 et v2, donc nous normalisons ici
         const routes = routeData.routes.map(route => {
-            // Extraction des informations de base
             const summary = {
                 lengthInMeters: route.summary.lengthInMeters,
                 travelTimeInSeconds: route.summary.travelTimeInSeconds,
@@ -66,9 +61,7 @@ exports.calculateRoute = async (req, res, next) => {
                 arrivalTime: route.summary.arrivalTime || new Date(Date.now() + route.summary.travelTimeInSeconds * 1000).toISOString()
             };
 
-            // Adaptation des segments de l'itinéraire (legs)
             const legs = route.legs.map(leg => {
-                // Extraire les points de l'itinéraire
                 const points = leg.points || [];
 
                 return {
@@ -93,14 +86,11 @@ exports.calculateRoute = async (req, res, next) => {
                     roundaboutExitNumber: instruction.roundaboutExitNumber || null,
                     travelTimeInSeconds: instruction.travelTimeInSeconds || null,
                     point: instruction.point || null,
-                    // Informations sur les voies si disponibles
                     lanes: instruction.lanes || null,
                     laneSeparators: instruction.laneSeparators || null,
-                    // Références aux panneaux routiers si disponibles
                     roadShields: instruction.roadShields || null
                 }));
 
-                // Groupes d'instructions si disponibles
                 const instructionGroups = route.guidance.instructionGroups ?
                     route.guidance.instructionGroups.map(group => ({
                         firstInstructionIndex: group.firstInstructionIndex,
@@ -114,8 +104,6 @@ exports.calculateRoute = async (req, res, next) => {
                     instructionGroups
                 };
             }
-
-            console.log("guidance", guidance)
 
             return {
                 distance: summary.lengthInMeters,
@@ -160,7 +148,6 @@ exports.searchLocation = async (req, res, next) => {
             countrySet: countrySet || 'FR'
         });
 
-        // Formater les résultats pour qu'ils soient plus faciles à utiliser
         const formattedResults = results.results.map(result => ({
             id: result.id,
             name: result.poi ? result.poi.name : result.address.freeformAddress,
@@ -202,7 +189,6 @@ exports.saveRoute = async (req, res, next) => {
             isFavorite
         } = req.body;
 
-        // Vérifier les champs obligatoires
         if (!name || !originName || !destinationName || !originCoordinates || !destinationCoordinates) {
             return res.status(400).json({
                 status: 'error',
@@ -210,7 +196,6 @@ exports.saveRoute = async (req, res, next) => {
             });
         }
 
-        // Créer un point PostgreSQL pour l'origine et la destination
         const pgOrigin = {
             type: 'Point',
             coordinates: originCoordinates
@@ -221,7 +206,6 @@ exports.saveRoute = async (req, res, next) => {
             coordinates: destinationCoordinates
         };
 
-        // Créer une LineString PostgreSQL pour la géométrie de l'itinéraire si fournie
         let pgGeometry = null;
         if (geometry && geometry.coordinates && geometry.coordinates.length > 0) {
             pgGeometry = {
@@ -230,11 +214,7 @@ exports.saveRoute = async (req, res, next) => {
             };
         }
 
-        // Extraire l'ID de l'utilisateur depuis le token JWT
         const userId = req.headers['x-user-id'];
-
-        console.log("pass here")
-        console.log("userId", userId)
 
         if (!userId) {
             return res.status(401).json({
@@ -243,7 +223,6 @@ exports.saveRoute = async (req, res, next) => {
             });
         }
 
-        // Créer l'itinéraire
         const route = await Route.create({
             userId,
             name,
@@ -283,17 +262,14 @@ exports.getUserRoutes = async (req, res, next) => {
     try {
         const userId = req.headers['x-user-id'];
 
-        // Options de filtrage et de tri
         const { favorite, sort, limit, offset } = req.query;
 
-        // Construire les conditions de recherche
         const where = { userId };
 
         if (favorite === 'true') {
             where.isFavorite = true;
         }
 
-        // Construire les options de tri
         let order = [['createdAt', 'DESC']];
 
         if (sort === 'name') {
@@ -302,7 +278,6 @@ exports.getUserRoutes = async (req, res, next) => {
             order = [['lastUsed', 'DESC']];
         }
 
-        // Récupérer les itinéraires
         const routes = await Route.findAndCountAll({
             where,
             order,
@@ -331,7 +306,6 @@ exports.getRouteById = async (req, res, next) => {
         const { id } = req.params;
         const userId = req.headers['x-user-id'];
 
-        // Récupérer l'itinéraire
         const route = await Route.findOne({
             where: {
                 id,
@@ -346,7 +320,6 @@ exports.getRouteById = async (req, res, next) => {
             });
         }
 
-        // Mettre à jour la date de dernière utilisation et incrémenter le compteur d'utilisation
         route.lastUsed = new Date();
         route.usageCount = (route.usageCount || 0) + 1;
         await route.save();
@@ -372,7 +345,6 @@ exports.updateRoute = async (req, res, next) => {
         const userId = req.headers['x-user-id'];
         const { name, isFavorite } = req.body;
 
-        // Récupérer l'itinéraire
         const route = await Route.findOne({
             where: {
                 id,
@@ -387,7 +359,6 @@ exports.updateRoute = async (req, res, next) => {
             });
         }
 
-        // Mettre à jour l'itinéraire
         if (name !== undefined) route.name = name;
         if (isFavorite !== undefined) route.isFavorite = isFavorite;
 
@@ -413,7 +384,6 @@ exports.deleteRoute = async (req, res, next) => {
         const { id } = req.params;
         const userId = req.headers['x-user-id'];
 
-        // Récupérer l'itinéraire
         const route = await Route.findOne({
             where: {
                 id,
@@ -428,7 +398,6 @@ exports.deleteRoute = async (req, res, next) => {
             });
         }
 
-        // Supprimer l'itinéraire
         await route.destroy();
 
         res.status(204).json({
@@ -463,7 +432,6 @@ exports.generateQRCode = async (req, res, next) => {
             });
         }
 
-        // Créer les données pour le QR code
         const qrData = {
             type: 'route',
             id: route.id,
@@ -500,17 +468,14 @@ exports.generateQRCode = async (req, res, next) => {
  */
 exports.getAllRoutes = async (req, res, next) => {
     try {
-        // Options de filtrage et de tri
         const { favorite, sort, limit, offset } = req.query;
 
-        // Construire les conditions de recherche
         const where = {};
 
         if (favorite === 'true') {
             where.isFavorite = true;
         }
 
-        // Construire les options de tri
         let order = [['createdAt', 'DESC']];
 
         if (sort === 'name') {
@@ -519,7 +484,6 @@ exports.getAllRoutes = async (req, res, next) => {
             order = [['lastUsed', 'DESC']];
         }
 
-        // Récupérer les itinéraires
         const routes = await Route.findAndCountAll({
             where,
             order,

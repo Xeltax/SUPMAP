@@ -6,7 +6,6 @@ const jwt = require('jsonwebtoken');
  * @returns {String} Token JWT
  */
 const generateToken = (user) => {
-    // Payload contenant les informations de l'utilisateur
     const payload = {
         id: user._id,
         email: user.email,
@@ -14,12 +13,10 @@ const generateToken = (user) => {
         role: user.role
     };
 
-    // Options du token (durée de validité)
     const options = {
         expiresIn: process.env.JWT_EXPIRES_IN || '1d'
     };
 
-    // Génération du token avec le secret JWT
     return jwt.sign(payload, process.env.JWT_SECRET, options);
 };
 
@@ -47,7 +44,6 @@ const extractTokenFromHeader = (req) => {
         return null;
     }
 
-    // Format attendu: "Bearer <token>"
     const parts = req.headers.authorization.split(' ');
 
     if (parts.length !== 2 || parts[0] !== 'Bearer') {

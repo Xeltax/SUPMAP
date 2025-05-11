@@ -29,7 +29,6 @@ export default function Home() {
     const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
 
-    // Rediriger vers le tableau de bord si l'utilisateur est déjà connecté
     useEffect(() => {
         if (isAuthenticated && !isLoading) {
             router.push('/dashboard');

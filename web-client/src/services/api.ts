@@ -12,7 +12,6 @@ export interface ApiResponse<T> {
 console.log(process.env.NEXT_PUBLIC_API_URL )
 console.log(process.env.API_URL )
 const isServer = typeof window === 'undefined'
-// Configuration de base d'Axios
 const apiConfig: AxiosRequestConfig = {
     baseURL: isServer
         ? process.env.API_URL        // SSR / getServerSideProps
@@ -22,10 +21,8 @@ const apiConfig: AxiosRequestConfig = {
     },
 };
 
-// Création de l'instance Axios
 const apiClient: AxiosInstance = axios.create(apiConfig);
 
-// Intercepteur pour ajouter le token JWT aux requêtes
 apiClient.interceptors.request.use(
     (config) => {
         const token = Cookies.get('token');
@@ -39,7 +36,6 @@ apiClient.interceptors.request.use(
     }
 );
 
-// Intercepteur pour gérer les réponses
 apiClient.interceptors.response.use(
     (response: AxiosResponse) => {
         return response;
@@ -47,7 +43,6 @@ apiClient.interceptors.response.use(
     (error : any) => {
         // Si le token est expiré ou invalide (statut 401), déconnecter l'utilisateur
         if (error.response && error.response.status === 401) {
-            // Vérifier si l'erreur ne provient pas d'une tentative de connexion
             const isLoginRequest = error.config.url.includes('/auth/login');
             const isRegisterRequest = error.config.url.includes('/auth/register');
 
@@ -64,9 +59,7 @@ apiClient.interceptors.response.use(
     }
 );
 
-// Service API
 const api = {
-    // Authentification
     auth: {
         login: async (email: string, password: string): Promise<ApiResponse<{ user: any; token: string }>> => {
             const response = await apiClient.post<ApiResponse<{ user: any; token: string }>>('/api/auth/login', {
@@ -127,7 +120,6 @@ const api = {
         }
     },
 
-    // Navigation et itinéraires
     routes: {
         calculate: async (data: {
             origin: [number, number] | string;
@@ -197,7 +189,6 @@ const api = {
         },
     },
 
-    // Trafic et incidents
     traffic: {
         getTrafficInfo: async (bbox: string, zoom?: number): Promise<ApiResponse<{ trafficInfo: any }>> => {
             const params = { bbox, zoom };

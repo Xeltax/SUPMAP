@@ -33,6 +33,12 @@ Supmap est une application de navigation développée pour l'entreprise Trafine.
 
 ### Lancement avec Docker
 
+Le lancement avec docker est recommandé pour éviter les problèmes de dépendances et de configuration. Il est également plus rapide à mettre en place.
+
+Le temps estimé pour le lancement de l'application est d'environ 3 minutes.
+
+Une fois tout les conteneurs lancés, vous pourrez accéder à l'application à l'adresse suivante : [http://localhost:8080](http://localhost:8080)
+
 #### Pour Windows
 
 **Prérequis :** Docker Desktop
@@ -178,6 +184,23 @@ Supmap est construit sur une architecture de microservices, permettant une meill
 Voici un schéma d'architecture de l'application :
 
 ![Architecture de Supmap](https://i.ibb.co/RG74F49h/Archi.png)
+
+## API
+Supmap expose plusieurs API RESTful via l'API Gateway. Voici les principales catégories d'endpoints :
+
+- **Authentification** : `/api/auth/login`, `/api/auth/register`, etc.
+- **Itinéraires** : `/api/navigation/routes`, etc.
+- **Incidents** : `/api/navigation/incidents`, etc.
+
+Exemple d'utilisation de l'API pour créer un utilisateur :
+
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "test@mail.com",
+  "password": "password123",
+```
 
 ## Utilisation de l'application
 

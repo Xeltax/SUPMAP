@@ -158,7 +158,8 @@ interface MonthlyData {
     routeTypes: {
         fastest: number;
         shortest: number;
-        balanced: number;
+        eco: number;
+        thrilling: number;
     };
     incidentTypes: {
         accident: number;
@@ -376,6 +377,10 @@ const StatsPage = ({
             y: {
                 beginAtZero: true,
                 stacked: true,
+                max: Math.max(...monthlyData.map(data => 
+                    data.routeTypes.fastest + data.routeTypes.shortest + data.routeTypes.eco + data.routeTypes.thrilling
+                )),
+                min: 0
             },
             x: {
                 stacked: true,
@@ -401,10 +406,17 @@ const StatsPage = ({
                 borderWidth: 1,
             },
             {
-                label: 'Équilibré',
-                data: monthlyData.map(data => data.routeTypes.balanced),
+                label: 'Éco',
+                data: monthlyData.map(data => data.routeTypes.eco),
                 backgroundColor: 'rgba(75, 192, 192, 0.5)',
                 borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1,
+            },
+            {
+                label: 'Pittoresque',
+                data: monthlyData.map(data => data.routeTypes.thrilling),
+                backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                borderColor: 'rgb(153, 102, 255)',
                 borderWidth: 1,
             },
         ],
@@ -1230,13 +1242,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 const routeDate = new Date(route.createdAt);
                 const now = new Date();
                 const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-                return routeDate >= thirtyDaysAgo && routeDate <= now;
+                return routeDate >= thirtyDaysAgo && routeDate <= now && users.some(user => user.id === route.userId);
             }).map(route => route.userId),
             ...incidentsWithUsers.filter(incident => {
                 const incidentDate = new Date(incident.createdAt);
                 const now = new Date();
                 const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-                return incidentDate >= thirtyDaysAgo && incidentDate <= now && incident.username !== 'Utilisateur inconnu';
+                return incidentDate >= thirtyDaysAgo && incidentDate <= now && 
+                       incident.username !== 'Utilisateur inconnu' && 
+                       users.some(user => user.id === incident.userId);
             }).map(incident => incident.userId)
         ]).size;
 
@@ -1351,7 +1365,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             const routeTypes = {
                 fastest: monthRoutes.filter(route => route.routeType === 'fastest').length,
                 shortest: monthRoutes.filter(route => route.routeType === 'shortest').length,
-                balanced: monthRoutes.filter(route => route.routeType === 'balanced').length,
+                eco: monthRoutes.filter(route => route.routeType === 'eco').length,
+                thrilling: monthRoutes.filter(route => route.routeType === 'thrilling').length,
             };
 
             // Calculate incident types for this month

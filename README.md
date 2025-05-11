@@ -18,6 +18,11 @@ Supmap est une application de navigation développée pour l'entreprise Trafine.
         - [Navigation Service](#navigation-service)
         - [Front-end](#front-end)
     - [Erreurs possibles](#erreurs-possibles)
+    - [Architecture](#architecture)
+        - [API Gateway](#api-gateway-1)
+        - [Auth Service](#auth-service-1)
+        - [Navigation Service](#navigation-service-1)
+        - [Front-end](#front-end-1)
     - [Utilisation de l'application](#utilisation-de-lapplication)
         - [Utilisation de la carte](#utilisation-de-la-carte)
         - [Tableau de bord](#tableau-de-bord)
@@ -137,6 +142,42 @@ npm run dev
   ```sql
   CREATE EXTENSION postgis;
   ```
+
+## Architecture
+Supmap est construit sur une architecture de microservices, permettant une meilleure séparation des préoccupations, une scalabilité accrue et une maintenance simplifiée. Voici les principaux composants de l'architecture :
+
+### Microservices
+1. **API Gateway** (Node.js + Express) :
+    - Point d'entrée unique pour toutes les requêtes.
+    - Gère le routage des requêtes vers les microservices appropriés
+    - Implémente des fonctionnalités transversales comme l'authorization et la gestion des erreurs
+2. **Auth Service** (Node.js) :
+    - Gestion des utilisateurs et des autorisations
+    - Authentification avec JWT (login, logout, refresh token)
+    - Enregistrement des nouveaux utilisateurs
+    - Gestion des rôles (utilisateur, administrateur)
+    - Stocke les données utilisateurs dans MongoDB
+3. **Navigation Service** (Node.js + PostgreSQL + PostGIS) :
+    - Gestion des itinéraires et des incidents
+    - Utilise l'API de TomTom pour la création d'itinéraires et la récupération des données en temps réel
+    - Stocke les itinéraires et les incidents dans PostgreSQL avec PostGIS pour la gestion des données géographiques
+4. **Front-end** (Next.js + React + TypeScript) :
+    - Interface utilisateur pour interagir avec les services
+    - Utilise l'API Gateway pour communiquer avec les microservices
+    - Intégration de la carte TomTom pour la visualisation des itinéraires et des incidents
+### Base de données
+- **MongoDB** : Utilisé pour stocker les données utilisateurs et les informations d'authentification.
+- **PostgreSQL avec PostGIS** : Stockage des données géospatiales (itinéraires, incidents, coordonnées)
+
+### Services externes
+- **TomTom API** : Utilisé pour la création d'itinéraires, la récupération des données de trafic et la géocodification.
+- **Google API Oauth** : Utilisé pour l'authentification des utilisateurs via leur compte Google.
+
+### Schéma d'architecture
+
+Voici un schéma d'architecture de l'application :
+
+![Architecture de Supmap](https://i.ibb.co/RG74F49h/Archi.png)
 
 ## Utilisation de l'application
 

@@ -35,7 +35,7 @@
     "react-dom": "19.0.0",
     "react-hook-form": "^7.56.1",
     "react-native": "0.79.2",
-    "react-native-maps": "1.7.1",
+    "react-native-maps": "^1.20.1",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.10.0",

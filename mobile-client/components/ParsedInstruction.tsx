@@ -12,23 +12,18 @@ interface ParsedInstructionProps {
  * Compatible avec le format utilisé par TomTom et le web-client
  */
 export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instruction, textStyle = {}, forceWhite = false }) => {
-  // Si l'instruction est vide, retourner null
   if (!instruction) return null;
   
   const parseInstruction = (text: string): React.ReactNode[] => {
-    // Même regex que dans le web-client pour détecter les balises
     const tagRegex = /<(\w+)>(.*?)<\/\1>/g;
     const parts: { type: string; content: string }[] = [];
 
     let lastIndex = 0;
     let match;
 
-    // Prétraiter le texte pour enlever les barres obliques isolées
-    text = text.replace(/ \/ /g, '\n'); // Remplacer les '/' isolés par des sauts de ligne
+    text = text.replace(/ \/ /g, '\n');
 
-    // Analyser toutes les balises dans le texte
     while ((match = tagRegex.exec(text)) !== null) {
-      // Ajouter le texte avant la balise actuelle
       if (match.index > lastIndex) {
         const rawContent = text.substring(lastIndex, match.index);
         
@@ -38,16 +33,14 @@ export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instructio
         });
       }
 
-      // Ajouter la partie balisée
       parts.push({
-        type: match[1], // Le type de balise (street, roadNumber, etc.)
-        content: match[2] // Le contenu à l'intérieur de la balise
+        type: match[1],
+        content: match[2]
       });
 
       lastIndex = match.index + match[0].length;
     }
 
-    // Ajouter le texte restant après la dernière balise
     if (lastIndex < text.length) {
       const rawContent = text.substring(lastIndex);
       parts.push({
@@ -56,10 +49,8 @@ export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instructio
       });
     }
 
-    // Convertir les parties analysées en éléments React Native
     return parts.map((part, index) => {
       if (part.type === 'text') {
-        // Traiter les sauts de ligne dans le texte
         if (part.content.includes('\n')) {
           const lines = part.content.split('\n');
           return (
@@ -73,16 +64,12 @@ export const ParsedInstruction: React.FC<ParsedInstructionProps> = ({ instructio
             </React.Fragment>
           );
         }
-        // Texte normal sans saut de ligne
         return <Text key={index} style={textStyle}>{part.content}</Text>;
       } else {
-        // Texte mis en évidence selon le type de balise
         let style;
         if (forceWhite) {
-          // Si forceWhite est activé, on utilise uniquement le style de mise en évidence en blanc
           style = styles.whiteText;
         } else {
-          // Sinon, on applique les styles spécifiques selon le type de balise
           switch (part.type) {
             case 'street':
               style = styles.street;
@@ -126,15 +113,15 @@ const styles = StyleSheet.create({
   },
   whiteText: {
     fontWeight: 'bold',
-    color: '#FFFFFF', // Blanc pour le mode minimisé
+    color: '#FFFFFF',
   },
   street: {
     fontWeight: 'bold',
-    color: '#3F51B5', // Bleu pour les noms de rues
+    color: '#3F51B5',
   },
   roadNumber: {
     fontWeight: 'bold',
-    backgroundColor: '#4CAF50', // Vert pour les numéros de routes
+    backgroundColor: '#4CAF50',
     color: 'white',
     paddingHorizontal: 4,
     borderRadius: 4,
@@ -142,22 +129,22 @@ const styles = StyleSheet.create({
   },
   exit: {
     fontWeight: 'bold',
-    backgroundColor: '#FFD600', // Jaune pour les sorties
+    backgroundColor: '#FFD600',
     color: 'black',
     paddingHorizontal: 4,
     borderRadius: 4,
   },
   direction: {
     fontWeight: 'bold',
-    color: '#FF5722', // Orange pour les directions
+    color: '#FF5722',
   },
   signpost: {
     fontStyle: 'italic',
     fontWeight: 'bold',
-    color: '#7B1FA2', // Violet pour les panneaux
+    color: '#7B1FA2',
   },
   separator: {
-    height: 6, // Espace vertical entre les éléments
+    height: 6,
     width: '100%',
   },
 });

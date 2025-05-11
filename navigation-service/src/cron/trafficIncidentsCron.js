@@ -6,7 +6,7 @@ const { insertTrafficIncidents } = require('../services/dbQueries');
 const NORMANDY_BBOX = [-1.5373653562812137, 48.90257667883992, 0.7880741778504614, 49.40242438761433];
 
 /**
- * Fetch and store traffic incidents
+ * Récupérer et stocker les incidents de circulation
  */
 async function fetchAndStoreIncidents() {
     try {

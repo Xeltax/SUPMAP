@@ -1,4 +1,3 @@
-// pages/admin/stats.tsx
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import {
@@ -1148,7 +1147,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Fetch all data in parallel
+        // Récupérer les données en parallèle
         const [incidentsResponse, usersResponse, routesResponse] = await Promise.all([
             axios.get(`${process.env.API_URL}/api/navigation/traffic/reports`, config),
             axios.get(`${process.env.API_URL}/api/auth/users`, config),
@@ -1159,7 +1158,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const users: User[] = usersResponse.data.data.users;
         const routes: Route[] = routesResponse.data.data.routes;
 
-        // Add username to each incident
+        // Ajouter le nom d'utilisateur à chaque incident
         const incidentsWithUsers = incidents.map(incident => {
             const user = users.find(u => u.id === incident.userId);
             return {
@@ -1168,7 +1167,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Add username to each route
+        // Ajouter le nom d'utilisateur à chaque itinéraire
         const routesWithUsers = routes.map(route => {
             const user = users.find(u => u.id === route.userId);
             return {
@@ -1177,7 +1176,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Get top 10 routes and incidents
+        // Récupérer les 10 itinéraires les plus utilisés
         const topRoutes = routesWithUsers
             .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
             .slice(0, 10);
@@ -1186,7 +1185,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 10);
 
-        // Calculate route statistics
+        // Calculer les statistiques des itinéraires
         const totalRoutes = routes.length;
         const newRoutesThisMonth = routes.filter(route => {
             const routeDate = new Date(route.createdAt);
@@ -1195,7 +1194,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                    routeDate.getFullYear() === now.getFullYear();
         }).length;
 
-        // Calculate route type distribution
+        // Calculer la distribution des types d'itinéraires
         const routeTypes = Array.from(new Set(routes.map(route => route.routeType)));
         const routeTypeDistribution = routeTypes.map(type => {
             const count = routes.filter(route => route.routeType === type).length;
@@ -1206,7 +1205,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Calculate incident statistics
+        // Calculer les statistiques des incidents
         const totalIncidents = incidentsWithUsers.length;
         const activeIncidents = incidentsWithUsers.filter(incident => incident.active).length;
         const newIncidentsThisMonth = incidentsWithUsers.filter(incident => {
@@ -1216,7 +1215,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                    incidentDate.getFullYear() === now.getFullYear();
         }).length;
 
-        // Calculate incident type distribution
+        // Calculer la distribution des types d'incidents
         const incidentTypes = Array.from(new Set(incidentsWithUsers.map(incident => incident.incidentType)));
         const incidentTypeDistribution = incidentTypes.map(type => {
             const count = incidentsWithUsers.filter(incident => incident.incidentType === type).length;
@@ -1227,7 +1226,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         });
 
-        // Calculate user statistics
+        // Calculer les statistiques des utilisateurs
         const totalUsers = users.length;
         const newUsersThisMonth = users.filter((user: User) => {
             const userDate = new Date(user.createdAt);
@@ -1236,7 +1235,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                    userDate.getFullYear() === now.getFullYear();
         }).length;
 
-        // Calculate active users
+        // Calculer les utilisateurs actifs
         const activeUsers = new Set([
             ...routes.filter(route => {
                 const routeDate = new Date(route.createdAt);
@@ -1254,7 +1253,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             }).map(incident => incident.userId)
         ]).size;
 
-        // Calculate growth rates
+        // Calculer le taux de croissance
         const lastMonthUsers = users.filter((user: User) => {
             const userDate = new Date(user.createdAt);
             const now = new Date();
@@ -1288,7 +1287,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             ? ((newIncidentsThisMonth - lastMonthIncidents) / lastMonthIncidents) * 100 
             : 0;
 
-        // Prepare top users data
+        // Préparer les données des utilisateurs
         const topUsers = users.map((user: User) => {
             const userRoutes = routes.filter((route: Route) => route.userId === user.id);
             const userIncidents = incidentsWithUsers.filter((incident: Incident) => 
@@ -1304,7 +1303,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }).sort((a: UserStats, b: UserStats) => (b.routesCount + b.incidentsCount) - (a.routesCount + a.incidentsCount))
           .slice(0, 10);
 
-        // General statistics
+        // Statistiques générales
         const generalStats: GeneralStats = {
             totalUsers,
             activeUsers,
@@ -1319,7 +1318,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             incidentsGrowthRate
         };
 
-        // Usage statistics
+        // Statistiques d'utilisation
         const usageStats: UsageStats = {
             activeUsersLast30Days: activeUsers,
             averageRoutesPerUser: totalRoutes / totalUsers,
@@ -1331,7 +1330,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             incidentTypeDistribution
         };
 
-        // Generate monthly data from existing data
+        // Générer les données mensuelles
         const now = new Date();
         const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1); // 12 derniers mois
         const monthlyData = Array.from({ length: 12 }, (_, i) => {
@@ -1339,7 +1338,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
             const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
 
-            // Filter data for this month
+            // Filtrer les données pour ce mois
             const cumulativeUsers = users.filter(user => {
                 const userDate = new Date(user.createdAt);
                 return userDate <= monthEnd;
@@ -1355,7 +1354,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 return incidentDate >= monthStart && incidentDate <= monthEnd;
             });
 
-            // Calculate active users for this month
+            // Calculer les utilisateurs actifs pour ce mois
             const monthActiveUsers = new Set([
                 ...monthRoutes.filter(route => {
                     const routeDate = new Date(route.createdAt);
@@ -1373,7 +1372,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 }).map(incident => incident.userId)
             ]).size;
 
-            // Calculate route types for this month
+            // Calculer les types d'itinéraires pour ce mois
             const routeTypes = {
                 fastest: monthRoutes.filter(route => route.routeType === 'fastest').length,
                 shortest: monthRoutes.filter(route => route.routeType === 'shortest').length,
@@ -1381,7 +1380,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 thrilling: monthRoutes.filter(route => route.routeType === 'thrilling').length,
             };
 
-            // Calculate incident types for this month
+            // Calculer les types d'incidents pour ce mois
             const incidentTypes = {
                 accident: monthIncidents.filter(incident => incident.incidentType === 'accident').length,
                 construction: monthIncidents.filter(incident => incident.incidentType === 'roadworks').length,
@@ -1389,7 +1388,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 other: monthIncidents.filter(incident => !['accident', 'roadworks', 'roadClosed'].includes(incident.incidentType)).length,
             };
 
-            // Calculate incident severity for this month
+            // Calculer la gravité des incidents pour ce mois
             const incidentSeverity = {
                 low: monthIncidents.filter(incident => incident.severity === 'low').length,
                 medium: monthIncidents.filter(incident => incident.severity === 'moderate').length,

@@ -867,7 +867,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Fetch incidents and users
+        // Récupérer les incidents et les utilisateurs
         const [incidentsResponse, usersResponse] = await Promise.all([
             axios.get(`${process.env.API_URL}/api/navigation/traffic/reports`, config),
             axios.get(`${process.env.API_URL}/api/auth/users`, config)

@@ -11,8 +11,7 @@
     "newArchEnabled": true,
     "extra": {
       "apiUrlWeb": "http://localhost:3000",
-      "apiPort": 3000,
-      "tomtomApiKey": "YOUR_TOMTOM_API_KEY"
+      "apiPort": 3000
     },
     "splash": {
       "image": "./assets/images/splash-icon.png",

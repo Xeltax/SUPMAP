@@ -149,6 +149,53 @@ npm run dev
   CREATE EXTENSION postgis;
   ```
 
+## Client Mobile
+
+Contrairement à l'application web, l'application mobile n'est pas conteneurisée dans le projet et nécessite une compilation locale. Cette partie vous guide à travers les étapes nécessaires pour exécuter l'application sur un appareil physique ou un émulateur.
+
+### Prérequis
+- Node.js et npm installés
+- [Expo Go](https://expo.dev/client) installé sur votre appareil mobile
+  - [Android Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+  - [iOS App Store](https://apps.apple.com/app/expo-go/id982107779)
+
+### Installation
+```bash
+cd ./mobile-client/
+npm install
+```
+
+### Lancement de l'application
+
+#### Méthode standard
+Pour lancer l'application avec la configuration par défaut :
+```bash
+npm start
+```
+
+#### Configuration réseau spécifique
+Expo peut sélectionner par défaut le réseau "Default Switch" au lieu de votre réseau Wi-Fi actuel utilisé par votre ordinateur et votre appareil mobile/émulateur, ce qui peut empêcher votre appareil mobile de se connecter à l'application. Pour résoudre ce problème :
+
+```bash
+npm run start:ip
+```
+
+Cette commande vous permettra de sélectionner manuellement l'interface réseau appropriée, garantissant que votre appareil mobile et votre environnement de développement sont sur le même réseau.
+
+#### Utilisation
+Une fois l'application lancée :
+1. Scannez le QR code affiché dans votre terminal avec l'application Expo Go
+2. L'application se chargera automatiquement sur votre appareil
+
+#### Dépannage
+- Assurez-vous que votre appareil mobile et votre ordinateur sont connectés au même réseau Wi-Fi
+- Si vous rencontrez des problèmes de connexion, essayez d'utiliser `npm run start:ip` et sélectionnez explicitement votre interface réseau
+
+#### Ressources additionnelles
+- [Documentation Expo](https://docs.expo.dev/)
+- [Guide de démarrage Expo](https://docs.expo.dev/get-started/installation/)
+
+
 ## Architecture
 Supmap est construit sur une architecture de microservices, permettant une meilleure séparation des préoccupations, une scalabilité accrue et une maintenance simplifiée. Voici les principaux composants de l'architecture :
 

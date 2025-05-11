@@ -42,18 +42,15 @@ interface ProfilePageProps {
 }
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
-    // États pour les données utilisateur
     const [user, setUser] = useState<User>(userData);
     const [isSaving, setIsSaving] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-    // États pour le formulaire de profil
     const [username, setUsername] = useState(userData.username);
     const [email, setEmail] = useState(userData.email);
     const [usernameError, setUsernameError] = useState('');
     const [emailError, setEmailError] = useState('');
 
-    // États pour le formulaire de mot de passe
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -63,11 +60,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
     const bgColor = useColorModeValue('white', 'gray.700');
     const borderColor = useColorModeValue('gray.200', 'gray.600');
 
-    // Fonction de validation pour le formulaire de profil
     const validateProfileForm = () => {
         let isValid = true;
 
-        // Valider le nom d'utilisateur
         if (!username) {
             setUsernameError('Le nom d\'utilisateur est requis');
             isValid = false;
@@ -81,7 +76,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
             setUsernameError('');
         }
 
-        // Valider l'email
         if (!email) {
             setEmailError('L\'email est requis');
             isValid = false;
@@ -95,7 +89,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
         return isValid;
     };
 
-    // Fonction de validation pour le formulaire de mot de passe
     const validatePasswordForm = () => {
         let isValid = true;
 
@@ -121,7 +114,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
         return isValid;
     };
 
-    // Mettre à jour le profil
     const handleUpdateProfile = async () => {
         if (!validateProfileForm()) {
             return;
@@ -130,7 +122,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
         try {
             setIsSaving(true);
 
-            // Ne mettre à jour que ce qui a changé
             const updateData: { username?: string; email?: string } = {};
 
             if (username !== user?.username) {
@@ -141,7 +132,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
                 updateData.email = email;
             }
 
-            // Si rien n'a changé, ne pas faire de requête
             if (Object.keys(updateData).length === 0) {
                 toast({
                     title: 'Information',
@@ -182,7 +172,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
         }
     };
 
-    // Mettre à jour le mot de passe
     const handleUpdatePassword = async () => {
         if (!validatePasswordForm()) {
             return;
@@ -194,7 +183,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
             const response = await api.auth.updatePassword(currentPassword, newPassword);
 
             if (response && response.status === 'success') {
-                // Réinitialiser les champs du formulaire
                 setCurrentPassword('');
                 setNewPassword('');
                 setConfirmPassword('');
@@ -223,7 +211,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
         }
     };
 
-    // Gérer la déconnexion
     const handleLogout = async () => {
         try {
             await api.auth.logout();
@@ -238,7 +225,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
 
             document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-            // Redirection vers la page de connexion (à adapter selon votre configuration de routing)
             window.location.href = '/login';
         } catch (error) {
             console.error('Erreur lors de la déconnexion:', error);
@@ -394,11 +380,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userData }) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-    // Récupérer le token depuis les cookies
     const { req } = context;
     const token = req.cookies.token;
 
-    // Rediriger vers login si pas de token
     if (!token) {
         return {
             redirect: {
@@ -409,12 +393,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     try {
-        // Configuration de l'en-tête avec le token
         const config = {
             headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Récupération des données utilisateur
         const userResponse = await axios.get(`${process.env.API_URL}/api/auth/me`, config);
 
         return {
@@ -425,7 +407,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
 
-        // En cas d'erreur d'authentification, rediriger vers la page de connexion
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return {
                 redirect: {
@@ -435,7 +416,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             };
         }
 
-        // Pour les autres erreurs, rediriger également vers login
         return {
             redirect: {
                 destination: '/login',

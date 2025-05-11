@@ -271,7 +271,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         
         return {
             props: {
-                initialIncidents: incidents,
+                initialIncidents: incidents.slice(0, 250),
                 apiKey: process.env.TOMTOM_API_KEY || ''
             }
         };
